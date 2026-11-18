@@ -98,7 +98,7 @@ export interface HiveApi {
   /** True when Hive runs with HIVE_DEBUG=1, so tests can drive the window. */
   debug: boolean
   home: string
-  /** The folder Hive starts with: ~/code when it exists, else the home folder. */
+  /** The folder Hive starts with: the home folder of the user. */
   defaultFolder(): Promise<string>
   scan(folder: string, open: OpenTabRef[]): Promise<ScanResult>
   search(folder: string, text: string): Promise<string[]>

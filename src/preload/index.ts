@@ -10,7 +10,8 @@ function listen<Args extends unknown[]>(channel: string, listener: (...args: Arg
 const api: HiveApi = {
   platform: process.platform,
   debug: process.env.HIVE_DEBUG === '1',
-  home: process.env.HOME ?? process.env.USERPROFILE ?? '',
+  // The main process resolves the home folder of the user with the operating system. A shell can set HOME to a path style that Windows does not use, such as /c/Users/name.
+  home: ipcRenderer.sendSync('app:home') as string,
   defaultFolder: () => ipcRenderer.invoke('app:defaultFolder'),
   scan: (folder, open) => ipcRenderer.invoke('sessions:scan', folder, open),
   search: (folder, text) => ipcRenderer.invoke('sessions:search', folder, text),

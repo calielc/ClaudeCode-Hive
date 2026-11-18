@@ -10,7 +10,7 @@ The owner is a developer who runs many sessions in parallel. The goals are a vie
 
 ## 2. The left panel
 
-- **Folder menu.** It selects the folder whose sessions are listed. The plus button adds a folder. The minus button removes the selected one from the list. The list and the selection are saved. The first start uses `~/code` as the folder. The home folder is the fallback for a machine without it.
+- **Folder menu.** It selects the folder whose sessions are listed. The plus button adds a folder. The minus button removes the selected one from the list. The list and the selection are saved. The first start uses the home folder of the user.
 - **Search.** The field searches the names of the sessions and the full text of their conversations, including the work of sub agents. Names match at once. The conversation search starts 300 ms after the last key and needs 2 characters. A result that matches only in a conversation carries the note "found in the conversation". Escape clears the field.
 - **Status counts.** Three numbers: working, waiting, ready. They count the open sessions and the sessions of the last 24 hours.
 - **Open section.** It has no heading and comes first. One card for each session open in a tab, in tab order. It also holds a new session that has no file yet, and a tab from another folder.

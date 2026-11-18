@@ -53,12 +53,16 @@ function FolderRow() {
           </option>
         ))}
       </select>
-      <button className="icon-button" title="Add folder" onClick={() => void addFolder()}>
-        +
+      <button className="icon-button" title="Add folder" aria-label="Add folder" onClick={() => void addFolder()}>
+        <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+          <path d="M6 1.5v9M1.5 6h9" />
+        </svg>
       </button>
       {folders.length > 1 && (
-        <button className="icon-button" title="Remove this folder from the list" onClick={() => removeFolder(selected)}>
-          −
+        <button className="icon-button" title="Remove this folder from the list" aria-label="Remove this folder from the list" onClick={() => removeFolder(selected)}>
+          <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+            <path d="M1.5 6h9" />
+          </svg>
         </button>
       )}
     </div>

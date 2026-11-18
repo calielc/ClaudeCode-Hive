@@ -56,6 +56,7 @@ All direct packages were on their latest version on 2026-11-18. The `overrides` 
 ## 5. IPC
 
 - Calls with an answer: `sessions:scan`, `sessions:search`, `usage:read`, `hooks:status`, `hooks:install`, `dialog:pickFolder`, `app:defaultFolder` and `pty:attach`.
+- One call that the preload makes at start and waits for: `app:home`. It returns the home folder from the operating system, not from the `HOME` variable, which a shell can set to a path style that Windows does not use.
 - Messages without an answer: `tabs:setOpen`, `app:openExternal`, `pty:write`, `pty:resize`, `pty:kill`, `windows:undock`, `windows:dock`, `windows:nextDisplay` and `windows:setTitle`.
 - Events to the pages: `pty:data`, `pty:exit`, `windows:docked-back` and `windows:reveal`.
 

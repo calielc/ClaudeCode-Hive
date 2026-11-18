@@ -212,7 +212,10 @@ function registerIpc(): void {
   })
   ipcMain.handle('sessions:scan', (_event, folder: string, open: OpenTabRef[]) => scan(folder, open))
   ipcMain.handle('sessions:search', (_event, folder: string, text: string) => searchSessions(folder, text))
-  ipcMain.handle('app:defaultFolder', () => (existsSync(join(homedir(), 'code')) ? join(homedir(), 'code') : homedir()))
+  ipcMain.on('app:home', (event) => {
+    event.returnValue = homedir()
+  })
+  ipcMain.handle('app:defaultFolder', () => homedir())
   ipcMain.handle('usage:read', () => readUsage())
   ipcMain.handle('hooks:status', () => hooksStatus())
   ipcMain.handle('hooks:install', () => installHooks())
