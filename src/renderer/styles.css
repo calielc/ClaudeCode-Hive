@@ -302,7 +302,19 @@ button {
 
 .chips {
   display: flex;
+  flex-wrap: nowrap;
+  min-width: 0;
   gap: 6px;
+}
+
+/* All chips share one line. The repository and branch chips shrink and end in an ellipsis. The model chip keeps its text. */
+.chips > .chip {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.chips > .chip.model {
+  flex: 0 0 auto;
 }
 
 .chip {
@@ -560,6 +572,7 @@ button {
 }
 
 .pane {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -627,6 +640,143 @@ button {
   min-height: 0;
   padding: 8px 10px;
   background: var(--pane-bg);
+}
+
+/* The agents of a session as rows on its card: Terminal first, then the agents. */
+.agent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+.agent-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 7px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.agent-row:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.agent-row.active {
+  background: rgba(91, 140, 255, 0.25);
+  border-color: var(--accent);
+}
+
+.agent-row.done:not(.active) {
+  opacity: 0.75;
+}
+
+.agent-row.more {
+  color: var(--muted);
+}
+
+.agent-glyph {
+  width: 8px;
+  font-size: 10px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.agent-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-dismiss {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.agent-dismiss:hover {
+  color: var(--text);
+}
+
+.agent-transcript {
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  user-select: text;
+}
+
+.agent-transcript > * {
+  margin-bottom: 10px;
+}
+
+.agent-empty,
+.t-label,
+.t-summary {
+  color: var(--muted);
+}
+
+.t-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.t-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.t-prompt {
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+}
+
+.t-tool {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.t-name {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.t-result,
+.t-thinking {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.t-result summary,
+.t-thinking summary {
+  cursor: pointer;
+}
+
+.t-result pre,
+.t-thinking pre {
+  margin: 4px 0 0;
+  padding: 6px 8px;
+  max-height: 260px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 6px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+
+.t-result.error summary {
+  color: var(--waiting);
 }
 
 .terminal-container,

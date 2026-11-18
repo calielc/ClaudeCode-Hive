@@ -6,6 +6,21 @@ export interface AgentInfo {
   model?: string
 }
 
+/** An agent that a session started, running or done. */
+export interface AgentSummary {
+  id: string
+  description: string
+  agentType?: string
+  model?: string
+  running: boolean
+}
+
+/** One readable item of an agent transcript. */
+export type TranscriptEntry =
+  | { kind: 'prompt' | 'text' | 'thinking'; text: string }
+  | { kind: 'tool'; name: string; text: string }
+  | { kind: 'result'; text: string; error: boolean }
+
 /** Extra facts for the cards of open sessions. */
 export interface SessionDetails {
   model?: string
@@ -99,6 +114,12 @@ export interface HiveApi {
     kill(id: string): void
     onData(listener: (id: string, data: string) => void): () => void
     onExit(listener: (exit: PtyExit) => void): () => void
+  }
+  agents: {
+    /** The agents that a session started, in the order they started. */
+    list(folder: string, sessionId: string): Promise<AgentSummary[]>
+    /** The readable transcript of one agent. */
+    transcript(folder: string, sessionId: string, agentId: string): Promise<TranscriptEntry[]>
   }
   /** The number of sessions that wait for the user, and a PNG data URL of the badge to show on the taskbar. */
   setWaitingCount(count: number, badge: string): void

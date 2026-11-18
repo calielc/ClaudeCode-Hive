@@ -28,6 +28,10 @@ const api: HiveApi = {
     onData: (listener) => listen<[string, string]>('pty:data', listener),
     onExit: (listener) => listen<[PtyExit]>('pty:exit', listener)
   },
+  agents: {
+    list: (folder, sessionId) => ipcRenderer.invoke('agents:list', folder, sessionId),
+    transcript: (folder, sessionId, agentId) => ipcRenderer.invoke('agents:transcript', folder, sessionId, agentId)
+  },
   setWaitingCount: (count, badge) => ipcRenderer.send('badge:set', count, badge),
   openFolder: (path) => ipcRenderer.send('app:openFolder', path),
   setThemeMenu: (names, current) => ipcRenderer.send('theme:menu', names, current),

@@ -4,6 +4,7 @@ import { activateTab, addFolder, installHooks, openSession, removeFolder, select
 import { abbreviatePath, countdown, relativeAge, shortModelName } from '../format'
 import { setState, useStore } from '../state'
 import { tagColor } from '../themes'
+import { AgentList } from './AgentView'
 import { reorderProps } from './reorder'
 
 const DAY = 86_400_000
@@ -224,9 +225,9 @@ function SessionCard({ session, now }: { session: SessionInfo; now: number }) {
   const tag = useStore((state) => state.tags[session.id])
   const isDetached = useStore((state) => state.detached.includes(session.id))
   const drop = useStore((state) => (state.tabDrop?.id === session.id ? (state.tabDrop.after ? 'drop-after' : 'drop-before') : ''))
+  const folder = useStore((state) => state.tabs.find((item) => item.id === session.id)?.folder)
   const details = session.details
   const color = tagColor(tag)
-  const agents = details?.agents ?? []
   return (
     <div
       className={`card ${selected ? 'selected' : ''} state-${session.state} ${drop}`}
@@ -257,18 +258,9 @@ function SessionCard({ session, now }: { session: SessionInfo; now: number }) {
           </span>
         )}
         {details?.branch && <span className="chip wide" title={details.branch}>⎇ {details.branch}</span>}
+        {details?.model && <span className="chip model">◆ {shortModelName(details.model)}</span>}
       </div>
-      <div className="chips">
-        {details?.model && <span className="chip">◆ {shortModelName(details.model)}</span>}
-        <span className={`chip ${agents.length > 0 ? 'hot' : ''}`}>{agents.length === 1 ? '1 agent' : `${agents.length} agents`}</span>
-      </div>
-      {agents.map((agent) => (
-        <div className="agent" key={agent.id}>
-          <i className="agent-dot" />
-          <span>{agent.description}</span>
-          {agent.model && <span className="muted">· {shortModelName(agent.model)}</span>}
-        </div>
-      ))}
+      {folder && <AgentList tabId={session.id} folder={folder} />}
       {details?.lastPrompt && <div className="last-prompt">{details.lastPrompt}</div>}
     </div>
   )

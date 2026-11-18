@@ -29,6 +29,8 @@ export interface State extends PaneState {
   usage: UsageSnapshot | null
   hooks: HooksStatus | null
   dropTarget: number | null
+  /** The agent whose transcript a tab shows instead of its terminal. A missing tab or null shows the terminal. */
+  agentViews: Record<string, string | null>
   /** Where a dragged tab would land: before or after this tab. */
   tabDrop: { id: string; after: boolean } | null
   contextMenu: ContextMenuState | null
@@ -79,6 +81,7 @@ export function createInitialState(): State {
     usage: null,
     hooks: null,
     dropTarget: null,
+    agentViews: {},
     tabDrop: null,
     contextMenu: null
   }

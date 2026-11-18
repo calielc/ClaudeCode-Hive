@@ -3,6 +3,7 @@ import { activateTab, closeTab, dropOnPane, newSession, selectPane, setLayout, s
 import { CAPACITY, type LayoutMode } from '../panes'
 import { setState, useStore } from '../state'
 import { fitEntry, getEntry, mountEntry, unmountEntry } from '../terminals'
+import { AgentTranscript } from './AgentView'
 import { endOfListProps, reorderProps } from './reorder'
 import { tagColor } from '../themes'
 
@@ -139,6 +140,7 @@ function Pane({ index }: { index: number }) {
   const sessionState = useStore((state) => state.openSessions.find((item) => item.id === state.slots[index])?.state ?? 'ready')
   const tag = useStore((state) => (state.slots[index] ? state.tags[state.slots[index]] : undefined))
   const color = tagColor(tag)
+  const agentId = useStore((state) => (state.slots[index] ? (state.agentViews[state.slots[index]] ?? null) : null))
   const classes = `pane ${active ? 'active' : ''} ${dropTarget ? 'drop' : ''} state-${sessionState}`
   if (!tabId || !tab) {
     return (
@@ -153,7 +155,11 @@ function Pane({ index }: { index: number }) {
   return (
     <div className={classes} style={color ? { borderColor: color } : undefined} {...paneDropProps(index)}>
       <div className="pane-body" onMouseDown={() => selectPane(index)}>
-        <TerminalHost tabId={tabId} />
+        {agentId ? (
+          <AgentTranscript folder={tab.folder} sessionId={tabId} agentId={agentId} />
+        ) : (
+          <TerminalHost tabId={tabId} />
+        )}
       </div>
     </div>
   )

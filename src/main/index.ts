@@ -9,6 +9,7 @@ import { hooksStatus, installHooks } from './hooks'
 import { PtyManager } from './pty'
 import { searchSessions } from './search'
 import { scan } from './sessions'
+import { listAgents, readAgentTranscript } from './agents'
 import { readUsage, readWaitingInfo, StatusMonitor } from './status'
 
 const isMac = process.platform === 'darwin'
@@ -200,6 +201,10 @@ function showWaiting(count: number, badge: string): void {
 }
 
 function registerIpc(): void {
+  ipcMain.handle('agents:list', (_event, folder: string, sessionId: string) => listAgents(folder, sessionId))
+  ipcMain.handle('agents:transcript', (_event, folder: string, sessionId: string, agentId: string) =>
+    readAgentTranscript(folder, sessionId, agentId)
+  )
   ipcMain.on('badge:set', (_event, count: number, badge: string) => {
     if (Number.isInteger(count) && count >= 0 && typeof badge === 'string' && badge.startsWith('data:image/png;base64,')) {
       showWaiting(count, badge)
