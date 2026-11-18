@@ -63,7 +63,9 @@ button {
 .folder-row select {
   flex: 1;
   min-width: 0;
-  padding: 5px 6px;
+  height: 30px;
+  padding: 0 6px;
+  line-height: 1.2;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -564,9 +566,16 @@ button {
   border-color: var(--accent);
 }
 
+/* A round badge with the number exactly in the middle. */
 .pane-badge {
-  padding: 0 5px;
+  display: grid;
+  flex: none;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
   font-size: 10px;
+  line-height: 1;
   font-weight: 700;
   background: rgba(91, 140, 255, 0.55);
   border-radius: 999px;
@@ -590,6 +599,11 @@ button {
 
 .tab .dot {
   flex: none;
+}
+
+/* The title has the same line height as the icons around it, so the dot, the title and the icons share one middle line. */
+.tab .tab-title {
+  line-height: 16px;
 }
 
 .tab-close:hover,

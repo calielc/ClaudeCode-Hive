@@ -41,6 +41,15 @@ export function Sidebar() {
   )
 }
 
+/** The home folder shows as its own name, for example "calie", because a lone "~" is a tiny glyph. Other folders start with "~". */
+function folderLabel(folder: string): string {
+  const home = window.hive.home
+  if (home && folder === home) {
+    return home.split(/[\\/]/).filter(Boolean).pop() ?? home
+  }
+  return abbreviatePath(folder, home)
+}
+
 function FolderRow() {
   const folders = useStore((state) => state.folders)
   const selected = useStore((state) => state.selectedFolder)
@@ -49,7 +58,7 @@ function FolderRow() {
       <select value={selected} onChange={(event) => selectFolder(event.target.value)} title={selected}>
         {folders.map((folder) => (
           <option key={folder} value={folder}>
-            {abbreviatePath(folder, window.hive.home)}
+            {folderLabel(folder)}
           </option>
         ))}
       </select>
