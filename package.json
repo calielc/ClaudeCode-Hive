@@ -42,6 +42,9 @@
   "build": {
     "appId": "com.calielc.hive",
     "productName": "Hive",
+    "artifactName": "Hive-${version}-${os}-${arch}.${ext}",
+    "npmRebuild": false,
+    "afterPack": "scripts/ad-hoc-sign.cjs",
     "files": [
       "out/**",
       "build/icon.png",

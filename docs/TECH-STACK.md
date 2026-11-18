@@ -113,7 +113,7 @@ The scripts run with the real `node` that the login shell finds. Without Node, t
 - `npm test` runs 45 unit tests. They cover the placement rules, the tab reorder, the saved session, formatting, the scanner, the search, the paths, the link rules and the agent transcripts.
 - `npm run test:e2e` builds the app and runs the end-to-end tests. They start the real app, so they need a screen. See section 12.3.
 - `npm run typecheck`, `npm run build` and `npm run dist` (an installer for the current system) are also available.
-- The packaged macOS app is unsigned, because no Developer ID certificate exists. Open it with a right click and "Open".
+- The installers are not signed with a trusted certificate, because none exists. Section 14 has the details. On macOS, open the app with a right click and "Open".
 
 ## 12. Tests with the real window
 
@@ -155,7 +155,21 @@ The tests in `e2e/` start the built app (`out/main/index.js`) with Playwright an
 - Renovate merges these updates on its own, after the CI jobs pass: minor and patch updates of the dev packages and of the GitHub Actions, patch updates of the app packages, and the monthly lock file update. Every other update waits for the approval of the owner. `electron`, `node-pty`, `electron-builder` and the `@xterm` packages never merge on their own.
 - Do not accept the `--force` fixes of `npm audit`. They downgrade Vite and electron-builder.
 
-## 14. Decisions and why
+## 14. Releases
+
+The workflow `.github/workflows/release.yml` builds the installers and makes a draft release on GitHub.
+
+- To make a release, change `version` in `package.json` and commit it. Then push a tag with the same number and a leading `v`, for example `git tag v2.1.0` and `git push origin v2.1.0`. The workflow stops if the tag and the version differ.
+- The workflow builds on two runners. The Windows runner makes an NSIS installer (`Hive-<version>-win-x64.exe`). The macOS runner makes a `.dmg` and a `.zip` for Apple Silicon (`arm64`) and for Intel (`x64`).
+- Before the build, each runner runs `npm run typecheck` and `npm test`. After the build, it starts the unpacked app and runs `e2e/packaged.e2e.ts`. This test proves that the app starts and that the native module `node-pty` loads from the packaged files.
+- The `release` job collects the files and creates a draft release. The notes list the commits since the last tag, without the `chore`, `ci`, `docs` and `test` commits. The owner reads the notes and the files, and then publishes the draft. A tag with a hyphen, for example `v2.1.0-beta.1`, makes a pre-release.
+- A run by hand (`workflow_dispatch`) builds the installers and keeps them as workflow artifacts for 7 days. It makes no release.
+- `electron-builder` does not rebuild `node-pty` (`npmRebuild` is `false`), because the package has prebuilt binaries for all systems. A rebuild needs a C++ toolchain, and it fails on a plain Windows machine.
+- The installers are not signed with a trusted certificate. Windows SmartScreen warns about an unknown publisher. On macOS, the hook `scripts/ad-hoc-sign.cjs` gives the app an ad hoc signature, because Apple Silicon reports an unsigned app as damaged. The app is not notarized, so the user must open it once with a right click and "Open".
+- To sign the installers later, add the certificate as repository secrets and set the `CSC_LINK` and `CSC_KEY_PASSWORD` variables in the build step. The hook then does nothing on macOS. Notarization needs more settings.
+- The app has no automatic update.
+
+## 15. Decisions and why
 
 - Electron, not Tauri. The terminal needs a pseudo terminal. `node-pty` has prebuilt binaries, so there is no Rust and no compile step. The owner knows TypeScript.
 - Hive replaces Swift in the same repository. The owner wanted one code base for all systems. The `swift-v1` tag keeps the old app.

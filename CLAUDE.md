@@ -35,7 +35,7 @@ Hive is a desktop app that lists the Claude Code sessions of a folder and runs t
 - Windows and Linux are not tested. Terminals use `cmd.exe` on Windows. The hook command of the fallback runner uses POSIX syntax.
 - No real Claude session was driven in the Electron version. Tests use fake commands.
 - Notifications, real mouse drag and drop, and the Ctrl+Tab key press are not tested live. Synthetic events cover drag and drop and the link clicks.
-- The macOS builds are unsigned and not notarized.
+- The installers are not signed with a trusted certificate, and the macOS app is not notarized. The macOS build has an ad hoc signature only. The Windows installer is tested here, and the macOS build is checked only by the release workflow. `docs/TECH-STACK.md`, section 14, describes the release pipeline.
 - `npm audit` lists no findings on 2026-11-18. The audit workflow runs it on each change of the package files and every Monday. Run `npm audit` after each update. Do not accept the `--force` fixes, because they downgrade Vite and electron-builder.
 - Renovate opens the update pull requests. It needs the Renovate GitHub App on the repository. `docs/TECH-STACK.md`, section 13, describes the pipelines.
 - The settings of the former Swift app do not carry over.

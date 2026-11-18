@@ -37,12 +37,14 @@ export async function launchHive(options: { fixture?: Fixture } = {}): Promise<H
   if (/\s/.test(script)) {
     throw new Error(`The path of the e2e folder must not hold a space: ${script}`)
   }
-  const electronPath = createRequire(join(root, 'package.json'))('electron') as string
+  // `HIVE_E2E_PACKAGED` is the path of a packaged app. Then the tests start that app and not the built files.
+  const packaged = process.env.HIVE_E2E_PACKAGED
+  const electronPath = packaged ?? (createRequire(join(root, 'package.json'))('electron') as string)
   const app = await electron.launch({
     executablePath: electronPath,
     cwd: root,
     args: [
-      join(root, 'out', 'main', 'index.js'),
+      ...(packaged ? [] : [join(root, 'out', 'main', 'index.js')]),
       `--user-data-dir=${fixture.userData}`,
       // The sandbox of Chromium needs a setting on some Linux runners.
       ...(process.platform === 'linux' ? ['--no-sandbox'] : [])

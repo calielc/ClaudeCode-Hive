@@ -1,0 +1,125 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  # A manual run builds the installers and keeps them as workflow artifacts for 7 days. It does not make a release.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+            builder-args: --win
+            # The path of the unpacked app, for the smoke test.
+            packaged: dist/win-unpacked/Hive.exe
+          - name: macOS
+            os: macos-latest
+            builder-args: --mac --arm64 --x64
+            packaged: dist/mac-arm64/Hive.app/Contents/MacOS/Hive
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Make sure that the tag matches the version in package.json
+        if: github.ref_type == 'tag'
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "The tag ${GITHUB_REF_NAME} does not match the version ${version} in package.json."
+            exit 1
+          fi
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+      # No certificate is configured. Windows skips the signing. The hook scripts/ad-hoc-sign.cjs signs the Mac app ad hoc.
+      - name: Build the installers
+        run: npm run dist -- ${{ matrix.builder-args }} --publish never
+
+      - name: Show the signature of the Mac app
+        if: runner.os == 'macOS'
+        run: |
+          codesign --display --verbose=2 dist/mac-arm64/Hive.app
+          codesign --verify --deep --strict --verbose=2 dist/mac-arm64/Hive.app
+
+      # Start the unpacked app. This proves that the native terminal module loads from the packaged files.
+      - name: Smoke test the packaged app
+        shell: bash
+        env:
+          HIVE_E2E_PACKAGED: ${{ github.workspace }}/${{ matrix.packaged }}
+        run: npx tsx --test e2e/packaged.e2e.ts
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: installers-${{ matrix.name }}
+          path: |
+            dist/Hive-*.exe
+            dist/Hive-*.dmg
+            dist/Hive-*.zip
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Make the draft release
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v8
+        with:
+          path: installers
+          merge-multiple: true
+
+      - name: Write the release notes
+        run: |
+          previous="$(git describe --tags --abbrev=0 --match 'v[0-9]*' "${GITHUB_REF_NAME}^" 2>/dev/null || true)"
+          range="${previous:+${previous}..}${GITHUB_REF_NAME}"
+          {
+            echo "## Changes"
+            echo
+            changes="$(git log --no-merges --pretty='- %s' "${range}" | grep -v -E '^- (chore|ci|docs|test)(\(.*\))?:' || true)"
+            if [ -n "${changes}" ]; then echo "${changes}"; else echo "- No change that users can see."; fi
+            echo
+            echo "## Install"
+            echo
+            echo "- **Windows:** run the file ending in \`win-x64.exe\`. Windows SmartScreen warns about an unknown publisher, because the installer is not signed. Choose \"More info\", then \"Run anyway\"."
+            echo "- **macOS:** open the \`.dmg\` for your Mac and drag Hive to Applications. Use \`arm64\` for Apple Silicon and \`x64\` for an Intel Mac. The app is not notarized. The first time, open it with a right click and \"Open\"."
+          } > notes.md
+          cat notes.md
+
+      # The release is a draft. The owner reads the notes and the files, and then publishes it.
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prerelease=""
+          case "${GITHUB_REF_NAME}" in *-*) prerelease="--prerelease" ;; esac
+          gh release create "${GITHUB_REF_NAME}" installers/* \
+            --draft ${prerelease} \
+            --title "Hive ${GITHUB_REF_NAME#v}" \
+            --notes-file notes.md

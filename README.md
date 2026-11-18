@@ -31,6 +31,13 @@ This is the Electron version. The earlier native macOS version in Swift is kept 
 
 Plain Shift+Tab goes to Claude Code.
 
+## Download
+
+The installers for Windows and macOS are on the Releases page of this repository.
+
+- Windows: run `Hive-<version>-win-x64.exe`. The installer is not signed, so Windows SmartScreen warns about an unknown publisher. Choose "More info", then "Run anyway".
+- macOS: open the `.dmg` for your Mac and drag Hive to Applications. Use `arm64` for Apple Silicon and `x64` for an Intel Mac. The app is not notarized. The first time, open it with a right click and "Open".
+
 ## Requirements
 
 - Node.js 20 or later, to build and run from source.
@@ -48,8 +55,11 @@ Plain Shift+Tab goes to Claude Code.
 Other commands:
 
 - `npm test` runs the unit tests.
+- `npm run test:e2e` starts the real app and runs the end-to-end tests.
 - `npm run typecheck` checks the types.
 - `npm run dist` builds an installer for the system you are on.
+
+To make a release, change the version in `package.json`, commit it, and push a tag with the same number, for example `v2.1.0`. The release workflow builds the installers and makes a draft release. `docs/TECH-STACK.md`, section 14, describes it.
 
 The renderer is React with `xterm.js`. The main process runs the terminals with `node-pty`, reads the session files and sends notifications. Run `npx electron scripts/make-icon.cjs` to draw the icon again.
 
