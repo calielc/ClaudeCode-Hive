@@ -145,6 +145,8 @@ function Pane({ index }: { index: number }) {
   const active = useStore((state) => state.activePane === index && state.layout !== 'single')
   const dropTarget = useStore((state) => state.dropTarget === index)
   const sessionState = useStore((state) => state.openSessions.find((item) => item.id === state.slots[index])?.state ?? 'ready')
+  const tag = useStore((state) => (state.slots[index] ? state.tags[state.slots[index]] : undefined))
+  const color = tagColor(tag)
   const classes = `pane ${active ? 'active' : ''} ${dropTarget ? 'drop' : ''} state-${sessionState}`
   if (!tabId || !tab) {
     return (
@@ -157,7 +159,7 @@ function Pane({ index }: { index: number }) {
     )
   }
   return (
-    <div className={classes} {...paneDropProps(index)}>
+    <div className={classes} style={color ? { borderColor: color } : undefined} {...paneDropProps(index)}>
       <div className="pane-body" onMouseDown={() => selectPane(index)}>
         <TerminalHost tabId={tabId} />
       </div>
