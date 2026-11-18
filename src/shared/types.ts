@@ -13,6 +13,8 @@ export interface AgentSummary {
   agentType?: string
   model?: string
   running: boolean
+  /** When the transcript last changed, in milliseconds. For a finished agent, this is about when it finished. */
+  updated: number
 }
 
 /** One readable item of an agent transcript. */

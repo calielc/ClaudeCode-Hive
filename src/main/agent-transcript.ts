@@ -77,6 +77,25 @@ export function parseTranscript(raw: string): TranscriptEntry[] {
   return entries
 }
 
+/** The model of the last assistant message that names one. */
+export function lastModel(raw: string): string | undefined {
+  const lines = raw.split('\n')
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    if (!lines[index].includes('"model"')) {
+      continue
+    }
+    try {
+      const model = ((JSON.parse(lines[index]) as Json).message as Json | undefined)?.model
+      if (typeof model === 'string' && !model.startsWith('<')) {
+        return model
+      }
+    } catch {
+      continue
+    }
+  }
+  return undefined
+}
+
 /** An agent is done when its last message is an answer with no tool call after it. */
 export function endsWithAnswer(raw: string): boolean {
   const lines = raw.split('\n').filter((line) => line.trim())

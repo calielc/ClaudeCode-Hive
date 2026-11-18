@@ -1,7 +1,7 @@
 import { readdir, readFile, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { AgentSummary, TranscriptEntry } from '@shared/types'
-import { endsWithAnswer, parseTranscript } from './agent-transcript'
+import { endsWithAnswer, lastModel, parseTranscript } from './agent-transcript'
 import { projectDirectory } from './paths'
 
 const STALE_MS = 15 * 60 * 1000
@@ -37,8 +37,9 @@ export async function listAgents(folder: string, sessionId: string): Promise<Age
       const agentType = typeof meta.agentType === 'string' ? meta.agentType : undefined
       const description = typeof meta.description === 'string' ? meta.description : (agentType ?? 'Agent')
       const quiet = Date.now() - info.mtimeMs > STALE_MS
-      const running = meta.finished !== true && !quiet && !endsWithAnswer(await readFile(transcript, 'utf8'))
-      found.push({ agent: { id, description, agentType, running }, started: info.birthtimeMs || info.ctimeMs })
+      const raw = await readFile(transcript, 'utf8')
+      const running = meta.finished !== true && !quiet && !endsWithAnswer(raw)
+      found.push({ agent: { id, description, agentType, model: lastModel(raw), running, updated: info.mtimeMs }, started: info.birthtimeMs || info.ctimeMs })
     } catch {
       continue
     }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AgentSummary, TranscriptEntry } from '@shared/types'
 import { activateTab } from '../actions'
+import { shortModelName } from '../format'
 import { setState, useStore } from '../state'
 
 /** Polls a value from the main process while the component is mounted. */
@@ -27,6 +28,20 @@ function usePolled<T>(load: () => Promise<T>, initial: T, intervalMs: number, ke
   return value
 }
 
+const EXPIRE_MS = 30 * 60 * 1000
+
+const TYPE_ICONS: Record<string, string> = {
+  explore: '⌕',
+  plan: '☰',
+  'general-purpose': '⚙',
+  'claude-code-guide': '?'
+}
+
+/** A small symbol for the type of an agent. An unknown type gets a plain diamond. */
+function typeIcon(agentType?: string): string {
+  return TYPE_ICONS[(agentType ?? '').toLowerCase()] ?? '◇'
+}
+
 /** The agents of a session. It stays empty for a session without agents. */
 export function useAgents(folder: string, sessionId: string): AgentSummary[] {
   return usePolled(() => window.hive.agents.list(folder, sessionId), [], 2000, `${folder}|${sessionId}`)
@@ -38,8 +53,10 @@ export function useAgents(folder: string, sessionId: string): AgentSummary[] {
  * Running agents and the open one always show. Finished agents fold behind a "+N done" row, and a cross hides one.
  */
 export function AgentList({ tabId, folder }: { tabId: string; folder: string }) {
-  const agents = useAgents(folder, tabId)
   const selected = useStore((state) => state.agentViews[tabId] ?? null)
+  // A finished agent leaves the list 30 minutes after it finished. The open one stays. The poll keeps the clock fresh.
+  const now = Date.now()
+  const agents = useAgents(folder, tabId).filter((agent) => agent.running || agent.id === selected || now - agent.updated < EXPIRE_MS)
   const [showDone, setShowDone] = useState(false)
   const [dismissed, setDismissed] = useState<string[]>([])
   if (agents.length === 0) {
@@ -61,11 +78,13 @@ export function AgentList({ tabId, folder }: { tabId: string; folder: string }) 
         <div
           key={agent.id}
           className={`agent-row ${selected === agent.id ? 'active' : ''} ${agent.running ? '' : 'done'}`}
-          title={agent.description}
+          title={agent.agentType ? `${agent.agentType}: ${agent.description}` : agent.description}
           onClick={() => choose(agent.id)}
         >
           <i className={`dot ${agent.running ? 'working' : 'ready'}`} />
-          <span className="agent-name">{agent.agentType ? `${agent.agentType}: ${agent.description}` : agent.description}</span>
+          <span className="agent-type">{typeIcon(agent.agentType)}</span>
+          <span className="agent-name">{agent.description}</span>
+          {agent.model && <span className="agent-model">{shortModelName(agent.model)}</span>}
           {!agent.running && agent.id !== selected && (
             <span
               className="agent-dismiss"

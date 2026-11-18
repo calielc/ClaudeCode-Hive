@@ -323,8 +323,8 @@ button {
   text-overflow: ellipsis;
   white-space: nowrap;
   padding: 5px 11px;
-  line-height: 1.5;
-  font-size: 11px;
+  line-height: 16.5px;
+  font-size: 10px;
   background: rgba(255, 255, 255, 0.09);
   border-radius: 999px;
 }
@@ -692,6 +692,21 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.agent-type {
+  flex: none;
+  width: 12px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.agent-model {
+  flex: none;
+  color: var(--muted);
+  font-size: 10px;
 }
 
 .agent-dismiss {

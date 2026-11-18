@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { endsWithAnswer, parseTranscript, toolSummary } from './agent-transcript'
+import { endsWithAnswer, lastModel, parseTranscript, toolSummary } from './agent-transcript'
 
 const line = (value: unknown): string => JSON.stringify(value)
 
@@ -47,4 +47,15 @@ test('endsWithAnswer is true only when the last message is an answer without a t
   const waiting = [line({ type: 'assistant', message: { content: [{ type: 'text', text: 'ok' }] } }), line({ type: 'user', message: { content: [{ type: 'tool_result', content: 'r' }] } })].join('\n')
   assert.equal(endsWithAnswer(waiting), false)
   assert.equal(endsWithAnswer(''), false)
+})
+
+test('lastModel returns the model of the last assistant message that names one', () => {
+  const raw = [
+    '{"type":"assistant","message":{"model":"claude-haiku-4-5","content":[]}}',
+    '{"type":"user","message":{"content":"x"}}',
+    '{"type":"assistant","message":{"model":"<synthetic>","content":[]}}',
+    'not json "model"'
+  ].join('\n')
+  assert.equal(lastModel(raw), 'claude-haiku-4-5')
+  assert.equal(lastModel(''), undefined)
 })
