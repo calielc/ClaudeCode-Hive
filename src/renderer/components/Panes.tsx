@@ -48,6 +48,7 @@ function TabBar() {
   const layout = useStore((state) => state.layout)
   const tags = useStore((state) => state.tags)
   const tabDrop = useStore((state) => state.tabDrop)
+  const openSessions = useStore((state) => state.openSessions)
   // The bar scrolls sideways only when the tabs do not fit. Its scroll stops at the ends.
   return (
     <div className="tabs" {...endOfListProps()}>
@@ -68,9 +69,23 @@ function TabBar() {
           >
             {detached.includes(tab.id) && <span title="In its own window">▣</span>}
             {layout !== 'single' && pane >= 0 && pane < CAPACITY[layout] && <span className="pane-badge">{pane + 1}</span>}
+            <i className={`dot ${openSessions.find((item) => item.id === tab.id)?.state ?? 'ready'}`} />
             <span className="tab-title">{tab.title}</span>
+            {!detached.includes(tab.id) && (
+              <button
+                className="tab-close"
+                title="Undock into its own window"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  undock(tab.id)
+                }}
+              >
+                ⇱
+              </button>
+            )}
             <button
               className="tab-close"
+              title="Close session"
               onClick={(event) => {
                 event.stopPropagation()
                 closeTab(tab.id)
@@ -130,8 +145,6 @@ function Pane({ index }: { index: number }) {
   const active = useStore((state) => state.activePane === index && state.layout !== 'single')
   const dropTarget = useStore((state) => state.dropTarget === index)
   const sessionState = useStore((state) => state.openSessions.find((item) => item.id === state.slots[index])?.state ?? 'ready')
-  const tag = useStore((state) => (state.slots[index] ? state.tags[state.slots[index]] : undefined))
-  const color = tagColor(tag)
   const classes = `pane ${active ? 'active' : ''} ${dropTarget ? 'drop' : ''} state-${sessionState}`
   if (!tabId || !tab) {
     return (
@@ -145,15 +158,6 @@ function Pane({ index }: { index: number }) {
   }
   return (
     <div className={classes} {...paneDropProps(index)}>
-      <div className="pane-header" style={color ? { background: `${color}59` } : undefined} onMouseDown={() => selectPane(index)} onContextMenu={(event) => {
-        event.preventDefault()
-        setState({ contextMenu: { x: event.clientX, y: event.clientY, sessionId: tab.id } })
-      }}>
-        <i className={`dot ${sessionState}`} />
-        <span className="pane-title">{tab.title}</span>
-        <button title="Undock into its own window" onClick={() => undock(tab.id)}>⇱</button>
-        <button title="Close session" onClick={() => closeTab(tab.id)}>✕</button>
-      </div>
       <div className="pane-body" onMouseDown={() => selectPane(index)}>
         <TerminalHost tabId={tabId} />
       </div>
