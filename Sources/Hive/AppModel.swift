@@ -48,7 +48,7 @@ final class DetachedWindowDelegate: NSObject, NSWindowDelegate {
 final class AppModel: ObservableObject {
     @Published var folders: [String]
     @Published var selectedFolder: String { didSet { folderChanged() } }
-    @Published var tabs: [TerminalTab] = []
+    @Published var tabs: [TerminalTab] = [] { didSet { store.refresh() } }
     @Published var selectedTabId: String? { didSet { scheduleFocus(force: true) } }
     @Published var theme: TerminalTheme {
         didSet {
@@ -70,8 +70,6 @@ final class AppModel: ObservableObject {
         }
     }
     @Published private(set) var detachedIds: Set<String> = []
-    /// Sessions selected in the left panel (for opening and deleting).
-    @Published var selection: Set<String> = []
     /// Which session shows in which pane (up to 4 panes). Panes past the layout's capacity are empty.
     @Published private(set) var slots: [String?] = [nil, nil, nil, nil]
     /// The pane that gets the next session you pick. It has the blue border.
@@ -84,6 +82,7 @@ final class AppModel: ObservableObject {
     private let monitor = StatusMonitor()
     private let notifier = Notifier()
     private var storeObserver: AnyCancellable?
+    private var openObserver: AnyCancellable?
     private var windows: [String: NSWindow] = [:]
     private var delegates: [String: DetachedWindowDelegate] = [:]
 
@@ -101,7 +100,13 @@ final class AppModel: ObservableObject {
         layout = LayoutMode(rawValue: UserDefaults.standard.string(forKey: "layout") ?? "") ?? .single
 
         // Keep tab titles equal to the session names, so /rename shows up in the tabs.
+        store.openTabs = { [weak self] in
+            self?.tabs.map { OpenTabRef(id: $0.id, folder: $0.folder, title: $0.title) } ?? []
+        }
         storeObserver = store.$sessions.sink { [weak self] sessions in
+            MainActor.assumeIsolated { self?.syncTitles(sessions) }
+        }
+        openObserver = store.$openSessions.sink { [weak self] sessions in
             MainActor.assumeIsolated { self?.syncTitles(sessions) }
         }
 
@@ -132,6 +137,17 @@ final class AppModel: ObservableObject {
             MainActor.assumeIsolated { self?.statusChanged(id: id, old: old, new: new) }
         }
         monitor.start()
+
+        // Ctrl+Tab and Ctrl+Shift+Tab switch tabs. The terminal would swallow the keys,
+        // so they are caught before it sees them. Shift+Tab alone still goes to Claude Code.
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            let tabKey: UInt16 = 48
+            let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            guard event.keyCode == tabKey, flags.contains(.control),
+                  !flags.contains(.command), !flags.contains(.option) else { return event }
+            let handled = MainActor.assumeIsolated { self?.cycleTabs(backwards: flags.contains(.shift)) ?? false }
+            return handled ? nil : event
+        }
 
         // A click inside a terminal does not reach SwiftUI, so find the clicked terminal here.
         NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
@@ -244,11 +260,25 @@ final class AppModel: ObservableObject {
         if selectedTabId != tab.id { selectedTabId = tab.id }
     }
 
-    /// Click on a tab in the tab bar: it goes into the active pane.
+    /// Ctrl+Tab goes to the next tab, Ctrl+Shift+Tab to the previous one. It wraps around.
+    /// Returns false when there is nothing to switch to, so the key is not swallowed.
+    func cycleTabs(backwards: Bool) -> Bool {
+        guard tabs.count > 1 else { return false }
+        let current = tabs.firstIndex { $0.id == selectedTabId } ?? (backwards ? 0 : -1)
+        let next = (current + (backwards ? -1 : 1) + tabs.count) % tabs.count
+        activate(tabs[next])
+        return true
+    }
+
+    /// Click on a tab (top bar, session list or Ctrl+Tab).
+    /// - Already in a pane: only select that pane. Nothing moves.
+    /// - Not visible: it replaces the session in the selected pane.
     func activate(_ tab: TerminalTab) {
         if detachedIds.contains(tab.id) {
             selectedTabId = tab.id
             focusDetached(tab)
+        } else if let pane = slots.firstIndex(of: tab.id), pane < layout.capacity {
+            selectPane(pane)
         } else {
             show(tab, inPane: activePane)
         }
@@ -271,7 +301,8 @@ final class AppModel: ObservableObject {
     }
 
     /// Keeps the panes consistent: no closed or undocked tab in a pane, no tab twice,
-    /// and no empty pane while a docked tab is hidden.
+    /// and no empty pane while a docked tab is hidden. An empty pane gets the tab that
+    /// follows the previous pane's tab, so a new split shows: current tab first, then the next ones.
     private func normalizeSlots() {
         let docked = dockedTabs.map(\.id)
         var next = [String?](repeating: nil, count: 4)
@@ -282,8 +313,17 @@ final class AppModel: ObservableObject {
                 used.insert(id)
             }
         }
+        func nextUnused(after id: String?) -> String? {
+            let start = id.flatMap { docked.firstIndex(of: $0) } ?? -1
+            for offset in 1...max(docked.count, 1) where !docked.isEmpty {
+                let candidate = docked[(start + offset) % docked.count]
+                if !used.contains(candidate) { return candidate }
+            }
+            return nil
+        }
         for index in 0..<layout.capacity where next[index] == nil {
-            if let id = docked.first(where: { !used.contains($0) }) {
+            let before = index > 0 ? next[index - 1] : selectedTabId
+            if let id = nextUnused(after: before) {
                 next[index] = id
                 used.insert(id)
             }
@@ -385,66 +425,6 @@ final class AppModel: ObservableObject {
         open(TerminalTab(sessionId: id, title: "New Session", folder: selectedFolder, resume: false, theme: theme))
     }
 
-    func open(ids: Set<String>) {
-        // Several sessions at once go into successive panes, so they do not replace each other.
-        var first = true
-        for session in store.sessions where ids.contains(session.id) {
-            if !first { activePane = (activePane + 1) % layout.capacity }
-            first = false
-            open(session)
-        }
-    }
-
-    // MARK: Delete
-
-    /// Asks first, then moves the session files to the Trash. Nothing is erased for good.
-    func requestDelete(_ ids: Set<String>) {
-        let chosen = store.sessions.filter { ids.contains($0.id) }
-        guard !chosen.isEmpty else { return }
-        let working = chosen.filter { $0.state == .working }.count
-        let open = chosen.filter { session in tabs.contains { $0.id == session.id } }.count
-
-        let alert = NSAlert()
-        alert.alertStyle = .warning
-        alert.messageText = chosen.count == 1
-            ? "Move “\(chosen[0].title)” to the Trash?"
-            : "Move \(chosen.count) sessions to the Trash?"
-        var details = "The session files go to the Trash. You can put them back from there."
-        if open > 0 { details += "\n\(open) open in a tab. The tab closes and the session stops." }
-        if working > 0 { details += "\n\(working) working right now." }
-        alert.informativeText = details
-        alert.addButton(withTitle: "Move to Trash").hasDestructiveAction = true
-        alert.addButton(withTitle: "Cancel")
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
-
-        var failed: [String] = []
-        let directory = SessionScanner.projectDirectory(for: selectedFolder)
-        let statusDirectory = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".claude-sessions/status")
-        for session in chosen {
-            if let tab = tabs.first(where: { $0.id == session.id }) { close(tab) }
-            // The transcript, and the folder with the sub agent transcripts when there is one.
-            for url in [directory.appendingPathComponent("\(session.id).jsonl"),
-                        directory.appendingPathComponent(session.id)]
-            where FileManager.default.fileExists(atPath: url.path) {
-                do { try FileManager.default.trashItem(at: url, resultingItemURL: nil) }
-                catch { failed.append(session.title) }
-            }
-            try? FileManager.default.removeItem(at: statusDirectory.appendingPathComponent("\(session.id).json"))
-            setTag(nil, for: session.id)
-        }
-        selection = []
-        store.refresh()
-
-        if !failed.isEmpty {
-            let error = NSAlert()
-            error.alertStyle = .critical
-            error.messageText = "Could not move \(failed.count) session(s) to the Trash"
-            error.informativeText = failed.joined(separator: "\n")
-            error.runModal()
-        }
-    }
-
     func open(_ session: SessionInfo) {
         if let tab = tabs.first(where: { $0.id == session.id }) {
             activate(tab)
@@ -459,7 +439,11 @@ final class AppModel: ObservableObject {
             MainActor.assumeIsolated { if let self, let tab { self.close(tab) } }
         }
         tabs.append(tab)
-        show(tab, inPane: activePane)
+        var target = activePane
+        if slots[activePane] != nil, let empty = (0..<layout.capacity).first(where: { slots[$0] == nil }) {
+            target = empty
+        }
+        show(tab, inPane: target)
     }
 
     func close(_ tab: TerminalTab) {

@@ -74,9 +74,32 @@ private final class TabProcessDelegate: NSObject, LocalProcessTerminalViewDelega
     }
 }
 
+/// A pane's terminal. The pane keeps its own view, and only the terminal inside changes when the
+/// session in the pane changes. That keeps the split sizes stable.
 struct TerminalContainer: NSViewRepresentable {
     let tab: TerminalTab
 
-    func makeNSView(context: Context) -> LocalProcessTerminalView { tab.view }
-    func updateNSView(_ nsView: LocalProcessTerminalView, context: Context) {}
+    func makeNSView(context: Context) -> NSView {
+        let container = NSView()
+        attach(tab.view, to: container)
+        return container
+    }
+
+    func updateNSView(_ container: NSView, context: Context) {
+        guard container.subviews.first !== tab.view else { return }
+        container.subviews.forEach { $0.removeFromSuperview() }
+        attach(tab.view, to: container)
+    }
+
+    private func attach(_ terminal: NSView, to container: NSView) {
+        terminal.removeFromSuperview()   // it may still sit in another pane for a moment
+        terminal.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(terminal)
+        NSLayoutConstraint.activate([
+            terminal.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            terminal.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            terminal.topAnchor.constraint(equalTo: container.topAnchor),
+            terminal.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+        ])
+    }
 }

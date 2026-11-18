@@ -57,9 +57,9 @@ struct ProgressSummary: View {
     @ObservedObject var store: SessionStore
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             badge(.working, "Working")
-            badge(.waiting, "Waiting for you")
+            badge(.waiting, "Waiting")
             badge(.ready, "Ready")
         }
         .font(.caption)
@@ -70,7 +70,7 @@ struct ProgressSummary: View {
     private func badge(_ state: SessionState, _ label: String) -> some View {
         HStack(spacing: 4) {
             Circle().fill(state.color).frame(width: 8, height: 8)
-            Text("\(store.count(of: state)) \(label)")
+            Text("\(store.count(of: state)) \(label)").lineLimit(1)
         }
     }
 }
@@ -121,46 +121,47 @@ struct SessionList: View {
             if store.isLoading {
                 ProgressView("Loading sessions…").frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-            List(selection: $model.selection) {
-                ForEach(store.grouped(now: context.date), id: \.group) { section in
-                    Section(section.group.title) {
-                        ForEach(section.sessions) { session in
-                            let selected = model.selectedTabId == session.id
-                            Group {
-                                if section.group == .active {
-                                    SessionCard(session: session, now: context.date, selected: selected)
-                                        .listRowSeparator(.hidden)
-                                } else {
-                                    SessionRow(session: session, now: context.date, selected: selected)
-                                }
+                List {
+                    openSection(now: context.date)
+                    ForEach(store.grouped(now: context.date), id: \.group) { section in
+                        Section(section.group.title) {
+                            ForEach(section.sessions) { session in
+                                SessionRow(session: session, now: context.date,
+                                           selected: model.selectedTabId == session.id)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture { model.open(session) }
+                                    .contextMenu { SessionTagMenu(id: session.id) }
+                                    .draggable(session.id)
                             }
-                            .draggable(session.id)
-
                         }
                     }
                 }
-            }
-            .listStyle(.sidebar)
-            .sessionActions(model)
+                .listStyle(.sidebar)
             }
         }
     }
-}
 
-extension View {
-    /// Right-click menu and keys for the selected sessions: Return or double-click opens,
-    /// Delete moves them to the Trash.
-    func sessionActions(_ model: AppModel) -> some View {
-        contextMenu(forSelectionType: String.self) { ids in
-            if !ids.isEmpty {
-                SessionTagMenu(ids: Array(ids))
-                Divider()
-                Button("Move to Trash…", role: .destructive) { model.requestDelete(ids) }
+    /// The sessions open in tabs, in tab order, as cards.
+    @ViewBuilder private func openSection(now: Date) -> some View {
+        if !store.openSessions.isEmpty {
+            Section("Open") {
+                ForEach(store.openSessions) { session in
+                    let tab = model.tabs.first { $0.id == session.id }
+                    SessionCard(session: session, now: now, selected: model.selectedTabId == session.id)
+                        .listRowSeparator(.hidden)
+                        .contentShape(Rectangle())
+                        .onTapGesture { if let tab { model.activate(tab) } }
+                        .contextMenu {
+                            SessionTagMenu(id: session.id)
+                            if let tab {
+                                Divider()
+                                Button("Close tab") { model.close(tab) }
+                            }
+                        }
+                        .draggable(session.id)
+                }
             }
-        } primaryAction: { ids in
-            model.open(ids: ids)
         }
-        .onDeleteCommand { model.requestDelete(model.selection) }
     }
 }
 
@@ -177,14 +178,16 @@ struct SearchResults: View {
                                        description: Text("Looks at the names and at the conversations in this folder."))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                List(results, id: \.session.id, selection: $model.selection) { result in
+                List(results, id: \.session.id) { result in
                     SessionRow(session: result.session, now: context.date,
                                selected: model.selectedTabId == result.session.id,
                                note: result.inConversationOnly ? "found in the conversation" : nil)
+                        .contentShape(Rectangle())
+                        .onTapGesture { model.open(result.session) }
+                        .contextMenu { SessionTagMenu(id: result.session.id) }
                         .draggable(result.session.id)
                 }
                 .listStyle(.sidebar)
-                .sessionActions(model)
             }
         }
     }
@@ -377,7 +380,7 @@ struct PaneLayout: View {
 
     @ViewBuilder private func slot(_ index: Int) -> some View {
         if let tab = model.tab(inPane: index) {
-            PaneView(tab: tab, index: index, store: model.store).id(tab.id)
+            PaneView(tab: tab, index: index, store: model.store)
         } else {
             EmptyPane(index: index)
         }
@@ -495,9 +498,18 @@ struct TabBar: View {
     @EnvironmentObject var model: AppModel
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 4) {
-                ForEach(model.tabs) { tab in
+        // When all tabs fit, the bar is a plain row that cannot scroll, so the wheel cannot push
+        // the tabs out of view. Only when they overflow does it become a scroll view that stops at its ends.
+        ViewThatFits(in: .horizontal) {
+            tabRow
+            ScrollView(.horizontal, showsIndicators: false) { tabRow }
+                .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+        }
+    }
+
+    private var tabRow: some View {
+        HStack(spacing: 4) {
+            ForEach(model.tabs) { tab in
                     let detached = model.detachedIds.contains(tab.id)
                     HStack(spacing: 6) {
                         if detached { Image(systemName: "macwindow") }
@@ -528,7 +540,6 @@ struct TabBar: View {
                     }
                 }
             }
-            .padding(6)
-        }
+        .padding(6)
     }
 }

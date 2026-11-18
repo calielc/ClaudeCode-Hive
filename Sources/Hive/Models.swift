@@ -6,26 +6,30 @@ enum SessionState: String {
     case ready
 }
 
+/// The groups below the open sessions in the left panel.
 enum AgeGroup: Int, CaseIterable, Identifiable {
-    case active
-    case aging
-    case old
+    case lastDay
+    case older
 
     var id: Int { rawValue }
 
     var title: String {
         switch self {
-        case .active: return "Active (last hour)"
-        case .aging: return "Getting old (up to 1 day)"
-        case .old: return "Older than 1 day"
+        case .lastDay: return "Last 24 hours"
+        case .older: return "Older than 1 day"
         }
     }
 
     static func group(for age: TimeInterval) -> AgeGroup {
-        if age < 3600 { return .active }
-        if age < 86400 { return .aging }
-        return .old
+        age < 86400 ? .lastDay : .older
     }
+}
+
+/// A session that is open in a tab. The tab can belong to another folder than the one selected.
+struct OpenTabRef {
+    let id: String
+    let folder: String
+    let title: String
 }
 
 struct AgentInfo: Hashable {

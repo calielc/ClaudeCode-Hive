@@ -4,10 +4,10 @@ Hive is a macOS app for working with many Claude Code sessions at once. It lists
 
 ## Features
 
-- Sessions of the chosen folder, grouped by age: active (under 1 hour), getting old (under 1 day) and older.
-- Tiles for active sessions with the repo, branch, model, running agents and last prompt.
+- The left panel shows the open sessions as cards on top, in tab order, then the sessions of the last 24 hours, then older ones.
+- Each card shows the repo, branch, model, running agents and last prompt.
 - Live status per session (working, waiting for you, ready), taken from Claude Code hooks.
-- Full text search over names and conversations, and delete to the Trash.
+- Full text search over names and conversations.
 - Layouts with 1, 2 or 4 panes. Select a pane, then pick a tab or session to put it there, or drag it onto a pane.
 - Undock a session into its own window, for example on another display, and dock it again.
 - Colour tags for sessions and terminal colour themes.

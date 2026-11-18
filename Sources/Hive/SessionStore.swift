@@ -7,15 +7,15 @@ import SwiftUI
 final class SessionStore: ObservableObject {
     @Published private(set) var sessions: [SessionInfo] = []
     @Published private(set) var isLoading = true
-    @Published var folder: String { didSet { activeOrder = [] } }
+    @Published var folder: String
+    /// The sessions open in tabs, in tab order. They get cards with details.
+    @Published private(set) var openSessions: [SessionInfo] = []
+    /// Set by the app: the tabs that are open right now.
+    var openTabs: () -> [OpenTabRef] = { [] }
     @Published var query = "" { didSet { updateSearch() } }
     @Published private(set) var contentMatches: Set<String> = []
     @Published private(set) var isSearching = false
     private var searchTask: Task<Void, Never>?
-
-    /// The order of the active tiles. A tile keeps its place while it writes. A session that
-    /// becomes active enters at the top, and a tile that leaves the group drops out.
-    private var activeOrder: [String] = []
 
     private let scanner = SessionScanner()
     private var scanning = false
@@ -34,35 +34,25 @@ final class SessionStore: ObservableObject {
         if scanning { scanAgain = true; return }
         scanning = true
         let folder = self.folder
+        let open = openTabs()
         Task {
-            let result = await scanner.scan(folder: folder)
+            let result = await scanner.scan(folder: folder, open: open)
             scanning = false
             if folder == self.folder {   // drop the result when the folder changed meanwhile
-                updateActiveOrder(result)
-                if result != sessions { sessions = result }
+                if result.sessions != sessions { sessions = result.sessions }
                 isLoading = false
             }
+            if result.open != openSessions { openSessions = result.open }
             if scanAgain { scanAgain = false; refresh() }
         }
     }
 
-    /// `sessions` is sorted by last activity, newest first.
-    private func updateActiveOrder(_ sessions: [SessionInfo], now: Date = Date()) {
-        let active = sessions.filter { AgeGroup.group(for: now.timeIntervalSince($0.modified)) == .active }
-        let activeIds = Set(active.map(\.id))
-        activeOrder.removeAll { !activeIds.contains($0) }
-        let known = Set(activeOrder)
-        activeOrder = active.map(\.id).filter { !known.contains($0) } + activeOrder
-    }
-
+    /// The sessions of the folder that are not open in a tab, by age. Open ones are in `openSessions`.
     func grouped(now: Date = Date()) -> [(group: AgeGroup, sessions: [SessionInfo])] {
-        let rank = Dictionary(uniqueKeysWithValues: activeOrder.enumerated().map { ($1, $0) })
+        let openIds = Set(openSessions.map(\.id))
+        let closed = sessions.filter { !openIds.contains($0.id) }
         return AgeGroup.allCases.compactMap { group in
-            var items = sessions.filter { AgeGroup.group(for: now.timeIntervalSince($0.modified)) == group }
-            if group == .active {
-                // Stable order. Sorting by last activity makes the tiles jump on every write.
-                items.sort { (rank[$0.id] ?? Int.max) < (rank[$1.id] ?? Int.max) }
-            }
+            let items = closed.filter { AgeGroup.group(for: now.timeIntervalSince($0.modified)) == group }
             return items.isEmpty ? nil : (group, items)
         }
     }
@@ -97,9 +87,11 @@ final class SessionStore: ObservableObject {
         }
     }
 
-    /// Only sessions of the last day count, so old sessions do not fill the numbers.
+    /// Open sessions and the sessions of the last day count, so old sessions do not fill the numbers.
     func count(of state: SessionState, now: Date = Date()) -> Int {
-        sessions.filter { $0.state == state && now.timeIntervalSince($0.modified) < 86400 }.count
+        let openIds = Set(openSessions.map(\.id))
+        let recent = sessions.filter { !openIds.contains($0.id) && now.timeIntervalSince($0.modified) < 86400 }
+        return (openSessions + recent).filter { $0.state == state }.count
     }
 }
 
@@ -142,7 +134,7 @@ actor SessionScanner {
         return ids
     }
 
-    func scan(folder: String) -> [SessionInfo] {
+    func scan(folder: String, open: [OpenTabRef]) -> (sessions: [SessionInfo], open: [SessionInfo]) {
         let directory = Self.projectDirectory(for: folder)
         let files = (try? FileManager.default.contentsOfDirectory(
             at: directory,
@@ -154,17 +146,37 @@ actor SessionScanner {
             let id = file.deletingPathExtension().lastPathComponent
             let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?
                 .contentModificationDate ?? .distantPast
-            let isActive = AgeGroup.group(for: Date().timeIntervalSince(modified)) == .active
             result.append(SessionInfo(
                 id: id,
                 title: title(for: file, id: id, modified: modified),
                 modified: modified,
                 state: state(for: id),
-                details: isActive ? details(for: file, id: id, directory: directory, modified: modified) : nil
+                details: nil
             ))
         }
         result.sort { $0.modified > $1.modified }
-        return result
+        return (result, open.map(openSession))
+    }
+
+    /// An open tab, with details for its card. It can be a new session without a file yet,
+    /// and it can belong to another folder than the selected one.
+    private func openSession(_ ref: OpenTabRef) -> SessionInfo {
+        let directory = Self.projectDirectory(for: ref.folder)
+        let file = directory.appendingPathComponent("\(ref.id).jsonl")
+        guard let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?
+                .contentModificationDate else {
+            return SessionInfo(
+                id: ref.id, title: ref.title, modified: Date(), state: state(for: ref.id),
+                details: SessionDetails(repo: Self.repoName(forWorkingDirectory: ref.folder))
+            )
+        }
+        var details = details(for: file, id: ref.id, directory: directory, modified: modified)
+        if details.repo == nil { details.repo = Self.repoName(forWorkingDirectory: ref.folder) }
+        let title = title(for: file, id: ref.id, modified: modified)
+        return SessionInfo(
+            id: ref.id, title: title == "New Session" ? ref.title : title, modified: modified,
+            state: state(for: ref.id), details: details
+        )
     }
 
     private func state(for id: String) -> SessionState {
