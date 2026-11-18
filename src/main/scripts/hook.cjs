@@ -28,7 +28,12 @@ process.stdin.on('end', () => {
         fs.unlinkSync(file)
       } catch {}
     } else {
-      fs.writeFileSync(file, JSON.stringify({ state, ts: Date.now() / 1000 }))
+      const record = { state, ts: Date.now() / 1000 }
+      // The notification text holds the question or the permission request. The toast shows it.
+      if (state === 'waiting' && typeof data.message === 'string' && data.message.trim()) {
+        record.message = data.message.trim().slice(0, 300)
+      }
+      fs.writeFileSync(file, JSON.stringify(record))
     }
   } catch {}
 })

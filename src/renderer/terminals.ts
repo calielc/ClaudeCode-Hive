@@ -81,7 +81,10 @@ export function createEntry(id: string, folder: string, resume: boolean, theme: 
   entries.set(id, entry)
 
   // Keys that Hive handles itself must not reach the terminal.
-  term.attachCustomKeyEventHandler((event) => shortcutFor(event) === undefined)
+  term.attachCustomKeyEventHandler((event) => {
+    const handled = clipboardKey(term, event)
+    return handled === undefined ? shortcutFor(event) === undefined : !handled
+  })
   term.onData((data) => {
     if (entry.started) {
       window.hive.pty.write(id, data)
@@ -93,6 +96,56 @@ export function createEntry(id: string, folder: string, resume: boolean, theme: 
     }
   })
   return entry
+}
+
+/**
+ * On macOS, Cmd and Ctrl both copy, cut and paste with C, X and V. A terminal cannot cut, so X copies.
+ * Ctrl+C and Ctrl+X without a selection still reach the program, because they interrupt and cancel.
+ * Ctrl+V with an image on the clipboard still reaches Claude Code, which pastes images with it.
+ * Returns true when Hive handled the key, and undefined when the terminal must see it.
+ */
+function clipboardKey(term: Terminal, event: KeyboardEvent): boolean | undefined {
+  if (window.hive?.platform !== 'darwin' || event.type !== 'keydown' || event.altKey || event.shiftKey) {
+    return undefined
+  }
+  if (event.metaKey === event.ctrlKey) {
+    return undefined
+  }
+  const key = event.key.toLowerCase()
+  if (key === 'c' || key === 'x') {
+    if (term.hasSelection()) {
+      void navigator.clipboard.writeText(term.getSelection())
+      event.preventDefault()
+      return true
+    }
+    return event.metaKey ? true : undefined
+  }
+  if (key === 'v') {
+    event.preventDefault()
+    void pasteInto(term)
+    return true
+  }
+  return undefined
+}
+
+async function pasteInto(term: Terminal): Promise<void> {
+  try {
+    const items = await navigator.clipboard.read()
+    if (items.some((item) => item.types.some((type) => type.startsWith('image/')))) {
+      term.input('\x16')
+      return
+    }
+  } catch {
+    // The clipboard has no rich content, or the page may not read it. Paste the text.
+  }
+  try {
+    const text = await navigator.clipboard.readText()
+    if (text) {
+      term.paste(text)
+    }
+  } catch {
+    // Nothing to paste.
+  }
 }
 
 /** Puts the terminal into a container. The first time, it also starts the process with the real size. */

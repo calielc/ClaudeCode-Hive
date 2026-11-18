@@ -8,7 +8,7 @@ import { hooksStatus, installHooks } from './hooks'
 import { PtyManager } from './pty'
 import { searchSessions } from './search'
 import { scan } from './sessions'
-import { readUsage, StatusMonitor } from './status'
+import { readUsage, readWaitingMessage, StatusMonitor } from './status'
 
 const isMac = process.platform === 'darwin'
 const mainWindows = new Set<BrowserWindow>()
@@ -57,6 +57,13 @@ function baseWindow(options: Electron.BrowserWindowConstructorOptions): BrowserW
     if (!isAppUrl(url, process.env['ELECTRON_RENDERER_URL'])) {
       event.preventDefault()
       openExternal(url)
+    }
+  })
+  // Chromium can keep Ctrl+Tab for itself on some systems, so the page never gets the key. The main process sees it first.
+  window.webContents.on('before-input-event', (event, input) => {
+    if (input.type === 'keyDown' && input.key === 'Tab' && input.control && !input.meta && !input.alt) {
+      event.preventDefault()
+      window.webContents.send('shortcut:cycle', input.shift)
     }
   })
   return window
@@ -136,7 +143,7 @@ function notify(id: string, body: string): void {
 
 const monitor = new StatusMonitor((id, previous, next) => {
   if (next === 'waiting' && previous !== 'waiting') {
-    notify(id, 'Needs your input')
+    void readWaitingMessage(id).then((message) => notify(id, message ?? 'Needs your input'))
   } else if (next === 'ready' && previous === 'working') {
     notify(id, 'Finished')
   }
@@ -205,6 +212,11 @@ async function screenshotMode(window: BrowserWindow): Promise<void> {
 }
 
 app.setName('Hive')
+// Windows names the source of a toast after the app user model id. Without it, the toast says "Electron".
+// A packaged app uses its appId, which the installer shortcut carries. The dev app uses the plain name.
+if (process.platform === 'win32') {
+  app.setAppUserModelId(app.isPackaged ? 'com.calielc.hive' : 'Hive')
+}
 
 if (process.env.HIVE_SCREENSHOT) {
   // A test run must paint even when other windows cover it.

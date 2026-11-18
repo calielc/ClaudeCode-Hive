@@ -69,10 +69,8 @@ The footer shows the 5 hour window and the weekly limit, and one bar for each mo
 ## 9. Keys
 
 - Next tab and previous tab: Ctrl+Tab and Ctrl+Shift+Tab, on every system.
-- New session: Cmd+N on macOS, Ctrl+Shift+N elsewhere.
-- Add folder: Cmd+O on macOS, Ctrl+Shift+O elsewhere.
-- Search: Cmd+F on macOS, Ctrl+Shift+F elsewhere.
-- Layout 1 to 4: Cmd+Option+1 to 4 on macOS, Ctrl+Shift+Alt+1 to 4 elsewhere.
-- Undock the selected session: Cmd+Shift+D on macOS, Ctrl+Shift+U elsewhere.
+- New session: Cmd+N on macOS, Ctrl+N elsewhere.
+- Search: Cmd+F on macOS, Ctrl+F elsewhere.
+- Copy, cut and paste on macOS: Cmd+C, Cmd+X and Cmd+V, and also Ctrl+C, Ctrl+X and Ctrl+V. A terminal cannot cut, so cut copies. Ctrl+C and Ctrl+X without a selection still go to Claude Code. Ctrl+V with an image on the clipboard also goes to Claude Code.
 - Plain Shift+Tab goes to Claude Code. The code is in `src/renderer/shortcuts.ts`.
 

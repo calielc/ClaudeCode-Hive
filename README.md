@@ -26,11 +26,8 @@ This is the Electron version. The earlier native macOS version in Swift is kept 
 ## Keys
 
 - Next tab and previous tab: Ctrl+Tab and Ctrl+Shift+Tab, on every system.
-- New session: Cmd+N on macOS, Ctrl+Shift+N elsewhere.
-- Add folder: Cmd+O on macOS, Ctrl+Shift+O elsewhere.
-- Search: Cmd+F on macOS, Ctrl+Shift+F elsewhere.
-- Layout 1 to 4: Cmd+Option+1 to 4 on macOS, Ctrl+Shift+Alt+1 to 4 elsewhere.
-- Undock the selected session: Cmd+Shift+D on macOS, Ctrl+Shift+U elsewhere.
+- New session: Cmd+N on macOS, Ctrl+N elsewhere.
+- Search: Cmd+F on macOS, Ctrl+F elsewhere.
 
 Plain Shift+Tab goes to Claude Code.
 

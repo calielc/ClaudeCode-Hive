@@ -1,15 +1,12 @@
 import { useEffect, useRef } from 'react'
-import { addFolder, cycleTabs, focusSelected, newSession, selectedTab, setLayout, startMainWindow, undock } from './actions'
+import { cycleTabs, focusSelected, newSession, startMainWindow } from './actions'
 import { ContextMenu } from './components/ContextMenu'
 import { PaneLayout, TopBar } from './components/Panes'
 import { Sidebar } from './components/Sidebar'
 import { UndockedView } from './components/UndockedView'
-import type { LayoutMode } from './panes'
 import { shortcutFor } from './shortcuts'
 import { themeNamed } from './themes'
 import { useStore } from './state'
-
-const LAYOUT_ORDER: LayoutMode[] = ['single', 'sideBySide', 'stacked', 'grid']
 
 export function App() {
   const hash = window.location.hash.slice(1)
@@ -45,20 +42,12 @@ function MainView() {
         cycleTabs(action.backwards)
       } else if (action.type === 'newSession') {
         newSession()
-      } else if (action.type === 'addFolder') {
-        void addFolder()
       } else if (action.type === 'search') {
         window.dispatchEvent(new Event('hive:focus-search'))
-      } else if (action.type === 'layout') {
-        setLayout(LAYOUT_ORDER[action.index])
-      } else if (action.type === 'undock') {
-        const tab = selectedTab()
-        if (tab) {
-          undock(tab.id)
-        }
       }
     }
     window.addEventListener('keydown', onKey, true)
+    window.hive.windows.onCycleTabs((backwards) => cycleTabs(backwards))
     // Typing must work right away after Alt-Tab back to Hive. A search field in use keeps the focus.
     const onWindowFocus = (): void => {
       if (document.activeElement?.tagName !== 'INPUT') {
