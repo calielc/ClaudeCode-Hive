@@ -9,32 +9,48 @@
   "semanticCommits": "disabled",
   "commitMessagePrefix": "chore:",
   "labels": ["dependencies"],
+  "automergeType": "pr",
+  "platformAutomerge": false,
   "vulnerabilityAlerts": {
     "labels": ["dependencies", "security"],
     "schedule": ["at any time"]
   },
   "lockFileMaintenance": {
     "enabled": true,
+    "automerge": true,
     "schedule": ["before 6am on the first day of the month"]
   },
   "packageRules": [
     {
-      "description": "One pull request for the minor and patch updates of the build and test tools",
+      "description": "Minor and patch updates of the build and test tools merge on their own after the CI jobs pass",
       "matchDepTypes": ["devDependencies"],
       "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "dev dependencies"
+      "groupName": "dev dependencies",
+      "automerge": true
     },
     {
-      "description": "One pull request for the minor and patch updates of the GitHub Actions",
+      "description": "Minor and patch updates of the GitHub Actions merge on their own after the CI jobs pass",
       "matchManagers": ["github-actions"],
       "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "github actions"
+      "groupName": "github actions",
+      "automerge": true
     },
     {
-      "description": "Electron, the terminal and the packager are the packages that can break the app. Each major update gets its own pull request and a label.",
-      "matchPackageNames": ["electron", "node-pty", "electron-builder", "@xterm/xterm"],
+      "description": "Patch updates of the packages that ship in the app merge on their own after the CI jobs pass",
+      "matchDepTypes": ["dependencies"],
+      "matchUpdateTypes": ["patch"],
+      "automerge": true
+    },
+    {
+      "description": "Each major update of the packages that can break the app gets its own pull request and a label",
+      "matchPackageNames": ["electron", "node-pty", "electron-builder", "@xterm/**"],
       "matchUpdateTypes": ["major"],
       "labels": ["dependencies", "needs-manual-test"]
+    },
+    {
+      "description": "Electron, the terminal and the packager never merge on their own, because a test in the real app is needed. This rule comes last, so it wins over the rules above.",
+      "matchPackageNames": ["electron", "node-pty", "electron-builder", "@xterm/**"],
+      "automerge": false
     }
   ]
 }
