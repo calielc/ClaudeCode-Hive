@@ -99,13 +99,13 @@ export function createEntry(id: string, folder: string, resume: boolean, theme: 
 }
 
 /**
- * On macOS, Cmd and Ctrl both copy, cut and paste with C, X and V. A terminal cannot cut, so X copies.
+ * On macOS, Cmd and Ctrl both copy, cut and paste with C, X and V. On the other systems, Ctrl does. A terminal cannot cut, so X copies.
  * Ctrl+C and Ctrl+X without a selection still reach the program, because they interrupt and cancel.
  * Ctrl+V with an image on the clipboard still reaches Claude Code, which pastes images with it.
  * Returns true when Hive handled the key, and undefined when the terminal must see it.
  */
 function clipboardKey(term: Terminal, event: KeyboardEvent): boolean | undefined {
-  if (window.hive?.platform !== 'darwin' || event.type !== 'keydown' || event.altKey || event.shiftKey) {
+  if (event.type !== 'keydown' || event.altKey || event.shiftKey) {
     return undefined
   }
   if (event.metaKey === event.ctrlKey) {
@@ -132,7 +132,8 @@ async function pasteInto(term: Terminal): Promise<void> {
   try {
     const items = await navigator.clipboard.read()
     if (items.some((item) => item.types.some((type) => type.startsWith('image/')))) {
-      term.input('\x16')
+      // Claude Code pastes an image with Ctrl+V, and with Alt+V on Windows.
+      term.input(window.hive?.platform === 'win32' ? '\x1bv' : '\x16')
       return
     }
   } catch {

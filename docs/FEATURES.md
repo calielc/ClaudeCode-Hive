@@ -72,6 +72,6 @@ The footer shows the 5 hour window and the weekly limit, and one bar for each mo
 - Next tab and previous tab: Ctrl+Tab and Ctrl+Shift+Tab, on every system.
 - New session: Cmd+N on macOS, Ctrl+N elsewhere.
 - Search: Cmd+F on macOS, Ctrl+F elsewhere.
-- Copy, cut and paste on macOS: Cmd+C, Cmd+X and Cmd+V, and also Ctrl+C, Ctrl+X and Ctrl+V. A terminal cannot cut, so cut copies. Ctrl+C and Ctrl+X without a selection still go to Claude Code. Ctrl+V with an image on the clipboard also goes to Claude Code.
+- Copy, cut and paste: Ctrl+C, Ctrl+X and Ctrl+V on every system, and also Cmd+C, Cmd+X and Cmd+V on macOS. A terminal cannot cut, so cut copies. Ctrl+C and Ctrl+X without a selection still go to Claude Code. With an image on the clipboard, paste goes to Claude Code as its own image paste key (Ctrl+V, and Alt+V on Windows).
 - Plain Shift+Tab goes to Claude Code. The code is in `src/renderer/shortcuts.ts`.
 
