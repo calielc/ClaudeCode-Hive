@@ -39,6 +39,7 @@ All direct packages were on their latest version on 2026-11-18. The `overrides` 
 - `src/renderer/components/`: `Sidebar`, `Panes` (top bar, tabs, panes, splitters), `ContextMenu`, `UndockedView` and `reorder`.
 - `src/renderer/themes.ts`, `format.ts`, `shortcuts.ts` and `styles.css`: themes and tag colours, formatting, keys and styles.
 - `scripts/make-icon.cjs`: draws `build/icon.png`. Run it with `npx electron scripts/make-icon.cjs`.
+- `scripts/brand-electron.cjs`: gives the dev `Electron.app` the name and the icon of Hive. `npm run dev` runs it first.
 
 ## 4. Data sources and formats
 
@@ -94,7 +95,7 @@ The "Install hooks" button calls `installHooks()` in `src/main/hooks.ts`. It doe
 
 ## 11. Build and run
 
-- `npm install`, then `npm run dev`: the interface hot reloads. A change to a file with the app state reloads the page, and the tabs come back.
+- `npm install`, then `npm run dev`. First, `scripts/brand-electron.cjs` gives the dev `Electron.app` in `node_modules` the name "Hive" and the Hive icon (macOS only). The menu bar and the Dock then do not show "Electron". The script signs the bundle again with an ad hoc signature. A new install of Electron resets the change, and the next `npm run dev` sets it again. After that, the interface hot reloads. A change to a file with the app state reloads the page, and the tabs come back.
 - `npm run dev:watch`: also restarts the whole app after a change in the main process. A restart ends all terminals. Do not use it for Hive inside Hive.
 - `npm test`: 38 unit tests for the placement rules, the tab reorder, the saved session, formatting, the scanner, the search, the paths and the link rules.
 - `npm run typecheck`, `npm run build` and `npm run dist` (an installer for the current system).
