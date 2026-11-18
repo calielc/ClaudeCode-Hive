@@ -443,6 +443,7 @@ button {
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
+  font-size: 12px;
   background: var(--bg-raised);
   border-bottom: 1px solid var(--border);
 }
@@ -494,7 +495,7 @@ button {
 
 .pane-badge {
   padding: 0 5px;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   background: rgba(91, 140, 255, 0.55);
   border-radius: 999px;
@@ -536,7 +537,7 @@ button {
   padding: 3px 9px;
   background: var(--bg);
   border: 0;
-  font-size: 15px;
+  font-size: 13px;
 }
 
 .layouts button.active {
