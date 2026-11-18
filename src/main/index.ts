@@ -1,8 +1,9 @@
-import { existsSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, Notification, screen } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, Notification, screen, shell } from 'electron'
 import type { OpenTabRef, PtyAttachOptions } from '@shared/types'
+import { isAppUrl, isOpenable } from './external-url'
 import { hooksStatus, installHooks } from './hooks'
 import { PtyManager } from './pty'
 import { searchSessions } from './search'
@@ -27,13 +28,38 @@ function loadRenderer(window: BrowserWindow, hash = ''): void {
   }
 }
 
+/** Opens a web link in the default browser of the system. `HIVE_OPEN_LOG` writes the link to a file instead, for tests. */
+function openExternal(url: string): void {
+  if (!isOpenable(url)) {
+    return
+  }
+  if (process.env.HIVE_OPEN_LOG) {
+    appendFileSync(process.env.HIVE_OPEN_LOG, `${url}\n`)
+    return
+  }
+  void shell.openExternal(url)
+}
+
 function baseWindow(options: Electron.BrowserWindowConstructorOptions): BrowserWindow {
-  return new BrowserWindow({
+  const window = new BrowserWindow({
     backgroundColor: '#1a1b26',
     icon: nativeImage.createFromPath(iconPath()),
-    webPreferences: { preload: join(__dirname, '../preload/index.js'), contextIsolation: true, sandbox: true },
+    // Terminals must keep running when the window is covered, so the page is not throttled in the background.
+    webPreferences: { preload: join(__dirname, '../preload/index.js'), contextIsolation: true, sandbox: true, backgroundThrottling: false },
     ...options
   })
+  // A link never opens a window of the app. A new window would have no browser session, so a login page asks to log in again.
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    openExternal(url)
+    return { action: 'deny' }
+  })
+  window.webContents.on('will-navigate', (event, url) => {
+    if (!isAppUrl(url, process.env['ELECTRON_RENDERER_URL'])) {
+      event.preventDefault()
+      openExternal(url)
+    }
+  })
+  return window
 }
 
 function broadcast(channel: string, ...args: unknown[]): void {
@@ -46,12 +72,6 @@ function createMainWindow(): BrowserWindow {
   const window = baseWindow({ width: 1400, height: 860, minWidth: 900, minHeight: 500, title: 'Hive' })
   mainWindows.add(window)
   window.on('closed', () => mainWindows.delete(window))
-  // A reload (hot reload while developing, or Cmd+R) loses the tabs of the page, so the processes behind them must end too.
-  window.webContents.on('did-start-navigation', (_event, _url, isInPlace, isMainFrame) => {
-    if (isMainFrame && !isInPlace) {
-      ptys.killAll()
-    }
-  })
   loadRenderer(window)
   return window
 }
@@ -133,6 +153,7 @@ function registerIpc(): void {
     const result = await dialog.showOpenDialog({ properties: ['openDirectory'], defaultPath: homedir() })
     return result.canceled ? null : result.filePaths[0]
   })
+  ipcMain.on('app:openExternal', (_event, url: string) => openExternal(url))
   ipcMain.on('tabs:setOpen', (_event, tabs: OpenTabRef[]) => {
     openTabs = tabs
   })
@@ -151,7 +172,7 @@ function registerIpc(): void {
   ipcMain.on('windows:setTitle', (_event, id: string, title: string) => undocked.get(id)?.setTitle(title))
 }
 
-/** For tests: `HIVE_EXEC_JS` runs a script in the window, `HIVE_SCREENSHOT` saves a picture of it and quits. */
+/** For tests: `HIVE_EXEC_JS` runs a script in the window, `HIVE_PROBE_JS` runs one after the wait and prints its result, `HIVE_SCREENSHOT` saves a picture of it and quits. */
 async function screenshotMode(window: BrowserWindow): Promise<void> {
   const target = process.env.HIVE_SCREENSHOT
   if (!target) {
@@ -169,6 +190,9 @@ async function screenshotMode(window: BrowserWindow): Promise<void> {
         }
         await new Promise((resolve) => setTimeout(resolve, Number(process.env.HIVE_WAIT_MS ?? 2500)))
       }
+      if (process.env.HIVE_PROBE_JS) {
+        console.log('[probe]', await window.webContents.executeJavaScript(process.env.HIVE_PROBE_JS, true))
+      }
       writeFileSync(target, (await window.webContents.capturePage()).toPNG())
       // Other windows (undocked terminals) get their own picture.
       const others = BrowserWindow.getAllWindows().filter((item) => item !== window)
@@ -181,6 +205,12 @@ async function screenshotMode(window: BrowserWindow): Promise<void> {
 }
 
 app.setName('Hive')
+
+if (process.env.HIVE_SCREENSHOT) {
+  // A test run must paint even when other windows cover it.
+  app.commandLine.appendSwitch('disable-renderer-backgrounding')
+  app.commandLine.appendSwitch('disable-backgrounding-occluded-windows')
+}
 
 void app.whenReady().then(() => {
   Menu.setApplicationMenu(

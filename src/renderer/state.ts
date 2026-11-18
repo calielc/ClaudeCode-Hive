@@ -1,14 +1,9 @@
 import { useSyncExternalStore } from 'react'
 import type { HooksStatus, SessionInfo, UsageSnapshot } from '@shared/types'
 import { initialPaneState, type LayoutMode, type PaneState } from './panes'
+import { loadSession, saveSession, type Tab } from './session-persist'
 
-export interface Tab {
-  id: string
-  folder: string
-  title: string
-  /** True for a session that already exists, false for a new one. */
-  resume: boolean
-}
+export type { Tab } from './session-persist'
 
 export interface ContextMenuState {
   x: number
@@ -34,6 +29,8 @@ export interface State extends PaneState {
   usage: UsageSnapshot | null
   hooks: HooksStatus | null
   dropTarget: number | null
+  /** Where a dragged tab would land: before or after this tab. */
+  tabDrop: { id: string; after: boolean } | null
   contextMenu: ContextMenuState | null
 }
 
@@ -61,11 +58,14 @@ export function createInitialState(): State {
   const saved = load()
   const home = window.hive.home
   const folders = saved.folders?.length ? saved.folders : [home]
+  // After a reload of the page the tabs come back. Their processes still run in the main process.
+  const session = loadSession()
   return {
     ...initialPaneState(saved.layout ?? 'single'),
+    ...(session ?? {}),
     folders,
     selectedFolder: saved.selectedFolder && folders.includes(saved.selectedFolder) ? saved.selectedFolder : folders[0],
-    tabs: [],
+    tabs: session?.tabs ?? [],
     themeName: saved.themeName ?? 'Tokyo Night',
     tags: saved.tags ?? {},
     splitX: saved.splitX ?? 0.5,
@@ -79,6 +79,7 @@ export function createInitialState(): State {
     usage: null,
     hooks: null,
     dropTarget: null,
+    tabDrop: null,
     contextMenu: null
   }
 }
@@ -100,6 +101,14 @@ export function setState(update: Partial<State> | ((current: State) => Partial<S
 }
 
 function persist(): void {
+  saveSession({
+    tabs: state.tabs,
+    tabIds: state.tabIds,
+    detached: state.detached,
+    slots: state.slots,
+    activePane: state.activePane,
+    selectedTabId: state.selectedTabId
+  })
   const saved: Saved = {
     folders: state.folders,
     selectedFolder: state.selectedFolder,

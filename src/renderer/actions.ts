@@ -4,6 +4,8 @@ import {
   addTab,
   cycle,
   detach as detachPane,
+  moveTab,
+  moveTabToEnd,
   dockBack,
   removeTab,
   selectPane as selectPaneState,
@@ -30,6 +32,14 @@ function applyPanes(next: PaneState): void {
 }
 
 // MARK: Tabs
+
+/** After a reload of the page: makes a terminal for every restored tab. It attaches to the process that still runs. */
+export function restoreTerminals(): void {
+  const theme = themeNamed(getState().themeName)
+  for (const tab of getState().tabs) {
+    createEntry(tab.id, tab.folder, tab.resume, theme)
+  }
+}
 
 export function newSession(): void {
   const { selectedFolder } = getState()
@@ -70,6 +80,21 @@ export function closeTab(id: string): void {
   applyPanes(removeTab(paneState(), id))
   syncOpenTabs()
   void refresh()
+}
+
+/** Puts a tab before or after another tab, or at the end when `targetId` is null. The cards on the left follow the same order. */
+export function reorderTab(id: string, targetId: string | null, after: boolean): void {
+  setState({ tabDrop: null })
+  const next = targetId === null ? moveTabToEnd(paneState(), id) : moveTab(paneState(), id, targetId, after)
+  applyPanes(next)
+  setState((current) => {
+    const position = (tabId: string): number => next.tabIds.indexOf(tabId)
+    return {
+      tabs: [...current.tabs].sort((left, right) => position(left.id) - position(right.id)),
+      openSessions: [...current.openSessions].sort((left, right) => position(left.id) - position(right.id))
+    }
+  })
+  syncOpenTabs()
 }
 
 export function selectPane(index: number): void {

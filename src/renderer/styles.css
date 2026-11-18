@@ -694,3 +694,20 @@ button {
   margin: 5px 0;
   background: var(--border);
 }
+
+/* Where a dragged tab will land */
+.tab.drop-before {
+  box-shadow: -3px 0 0 var(--accent);
+}
+
+.tab.drop-after {
+  box-shadow: 3px 0 0 var(--accent);
+}
+
+.card.drop-before {
+  box-shadow: 0 -4px 0 var(--accent), 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.card.drop-after {
+  box-shadow: 0 4px 0 var(--accent), 0 2px 6px rgba(0, 0, 0, 0.3);
+}

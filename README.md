@@ -12,6 +12,7 @@ This is the Electron version. The earlier native macOS version in Swift is kept 
 - Full text search over the names and the conversations of the selected folder.
 - Layouts with 1, 2 or 4 panes. Select a pane, then pick a tab or a session to put it there. A tab that is already visible only selects its pane. You can also drag a session or a tab onto a pane.
 - Undock a session into its own window, for example on another display, and dock it again.
+- Links in the terminal, also long ones that wrap over several lines, open in your default browser, where you are already logged in. Only web and mail links open.
 - Colour tags for sessions and six terminal colour themes.
 - If a session finishes or needs you and Hive is not the active window, the system shows a notification.
 - Usage bars for the 5 hour window and the weekly limit.
@@ -39,7 +40,9 @@ Plain Shift+Tab goes to Claude Code.
     npm install
     npm run dev
 
-`npm run dev` has hot reload. When you change the interface (React or CSS), the window updates at once and keeps its tabs. When you change the main process or the preload script, the app restarts, and its terminals end. Use `npm run dev:ui` to reload only the interface.
+`npm run dev` has hot reload for the interface. When you change React or CSS code, the window updates at once. When you change a file that holds the state of the app, the page reloads. After a reload the tabs come back, and they attach again to the Claude processes that still run, so no session is lost.
+
+`npm run dev:watch` also restarts the whole app when the main process or the preload script changes. A restart ends all terminals. Do not use it when you run Hive inside Hive, because it ends your own session.
 
 Other commands:
 

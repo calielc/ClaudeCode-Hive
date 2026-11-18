@@ -3,6 +3,7 @@ import { activateTab, closeTab, dropOnPane, newSession, selectPane, setLayout, s
 import { CAPACITY, type LayoutMode } from '../panes'
 import { setState, useStore } from '../state'
 import { fitEntry, getEntry, mountEntry, unmountEntry } from '../terminals'
+import { endOfListProps, reorderProps } from './reorder'
 import { tagColor, THEMES } from '../themes'
 
 const LAYOUTS: { mode: LayoutMode; title: string; icon: string }[] = [
@@ -46,19 +47,19 @@ function TabBar() {
   const detached = useStore((state) => state.detached)
   const layout = useStore((state) => state.layout)
   const tags = useStore((state) => state.tags)
+  const tabDrop = useStore((state) => state.tabDrop)
   // The bar scrolls sideways only when the tabs do not fit. Its scroll stops at the ends.
   return (
-    <div className="tabs">
+    <div className="tabs" {...endOfListProps()}>
       {tabs.map((tab) => {
         const pane = slots.indexOf(tab.id)
         const color = tagColor(tags[tab.id])
         return (
           <div
             key={tab.id}
-            className={`tab ${selected === tab.id ? 'selected' : ''}`}
+            className={`tab ${selected === tab.id ? 'selected' : ''} ${tabDrop?.id === tab.id ? (tabDrop.after ? 'drop-after' : 'drop-before') : ''}`}
             style={color ? { background: `${color}59` } : undefined}
-            draggable
-            onDragStart={(event: DragEvent) => event.dataTransfer.setData('text/hive-session', tab.id)}
+            {...reorderProps(tab.id, 'x')}
             onClick={() => activateTab(tab.id)}
             onContextMenu={(event: MouseEvent) => {
               event.preventDefault()

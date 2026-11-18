@@ -88,6 +88,8 @@ export interface HiveApi {
   installHooks(): Promise<HooksStatus>
   pickFolder(): Promise<string | null>
   setOpenTabs(tabs: OpenTabRef[]): void
+  /** Opens a web link in the default browser of the system, where the user is already logged in. */
+  openExternal(url: string): void
   pty: {
     attach(id: string, options: PtyAttachOptions): Promise<PtyAttachResult>
     write(id: string, data: string): void

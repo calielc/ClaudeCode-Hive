@@ -162,3 +162,25 @@ export function cycle(state: PaneState, backwards: boolean): string | null {
   const count = state.tabIds.length
   return state.tabIds[(start + (backwards ? -1 : 1) + count) % count]
 }
+
+/** Moves a tab to just before or just after another tab. The panes keep their sessions. */
+export function moveTab(state: PaneState, id: string, targetId: string, after: boolean): PaneState {
+  if (id === targetId || !state.tabIds.includes(id)) {
+    return state
+  }
+  const others = state.tabIds.filter((item) => item !== id)
+  const index = others.indexOf(targetId)
+  if (index < 0) {
+    return state
+  }
+  const insertAt = after ? index + 1 : index
+  return { ...state, tabIds: [...others.slice(0, insertAt), id, ...others.slice(insertAt)] }
+}
+
+/** Moves a tab to the end of the list. */
+export function moveTabToEnd(state: PaneState, id: string): PaneState {
+  if (!state.tabIds.includes(id)) {
+    return state
+  }
+  return { ...state, tabIds: [...state.tabIds.filter((item) => item !== id), id] }
+}

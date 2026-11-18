@@ -4,6 +4,7 @@ import { activateTab, addFolder, installHooks, openSession, removeFolder, select
 import { abbreviatePath, countdown, relativeAge, shortModelName } from '../format'
 import { setState, useStore } from '../state'
 import { tagColor } from '../themes'
+import { reorderProps } from './reorder'
 
 const DAY = 86_400_000
 
@@ -211,15 +212,15 @@ function SessionCard({ session, now }: { session: SessionInfo; now: number }) {
   const selected = useStore((state) => state.selectedTabId === session.id)
   const tag = useStore((state) => state.tags[session.id])
   const isDetached = useStore((state) => state.detached.includes(session.id))
+  const drop = useStore((state) => (state.tabDrop?.id === session.id ? (state.tabDrop.after ? 'drop-after' : 'drop-before') : ''))
   const details = session.details
   const color = tagColor(tag)
   const agents = details?.agents ?? []
   return (
     <div
-      className={`card ${selected ? 'selected' : ''} state-${session.state}`}
+      className={`card ${selected ? 'selected' : ''} state-${session.state} ${drop}`}
       style={color ? { background: `${color}33`, boxShadow: `inset 4px 0 0 ${color}` } : undefined}
-      draggable
-      onDragStart={(event) => startDrag(event, session.id)}
+      {...reorderProps(session.id, 'y')}
       onClick={() => activateTab(session.id)}
       onContextMenu={(event) => openMenu(event, session.id)}
     >

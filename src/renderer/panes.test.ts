@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { activate, addTab, cycle, detach, dockBack, initialPaneState, removeTab, selectPane, setLayout, show, type PaneState } from './panes.ts'
+import { activate, addTab, cycle, detach, dockBack, initialPaneState, moveTab, moveTabToEnd, removeTab, selectPane, setLayout, show, type PaneState } from './panes.ts'
 
 /** Opens the tabs one by one, then goes back to the first one, as a user would. */
 function withTabs(layout: PaneState['layout'], ...ids: string[]): PaneState {
@@ -109,4 +109,36 @@ test('Ctrl+Tab cycles forwards and backwards and wraps', () => {
   assert.equal(cycle(state, false), 'a')
   assert.equal(cycle(state, true), 'b')
   assert.equal(cycle(withTabs('single', 'a'), false), null)
+})
+
+test('a tab moves before or after another tab', () => {
+  const state = withTabs('single', 'a', 'b', 'c', 'd')
+  assert.deepEqual(moveTab(state, 'd', 'a', false).tabIds, ['d', 'a', 'b', 'c'])
+  assert.deepEqual(moveTab(state, 'a', 'c', true).tabIds, ['b', 'c', 'a', 'd'])
+  assert.deepEqual(moveTab(state, 'a', 'c', false).tabIds, ['b', 'a', 'c', 'd'])
+  assert.deepEqual(moveTabToEnd(state, 'a').tabIds, ['b', 'c', 'd', 'a'])
+})
+
+test('moving a tab onto itself or onto an unknown tab changes nothing', () => {
+  const state = withTabs('single', 'a', 'b', 'c')
+  assert.deepEqual(moveTab(state, 'b', 'b', true).tabIds, ['a', 'b', 'c'])
+  assert.deepEqual(moveTab(state, 'b', 'zzz', true).tabIds, ['a', 'b', 'c'])
+  assert.deepEqual(moveTab(state, 'zzz', 'a', true).tabIds, ['a', 'b', 'c'])
+})
+
+test('reordering does not change which session shows in which pane', () => {
+  let state = withTabs('single', 'a', 'b', 'c')
+  state = setLayout(state, 'sideBySide')
+  const before = [...state.slots]
+  state = moveTab(state, 'c', 'a', false)
+  assert.deepEqual(state.slots, before)
+  assert.equal(state.selectedTabId, 'a')
+})
+
+test('Ctrl+Tab follows the new order', () => {
+  let state = withTabs('single', 'a', 'b', 'c')
+  state = moveTab(state, 'c', 'a', false)
+  assert.deepEqual(state.tabIds, ['c', 'a', 'b'])
+  assert.equal(cycle(activate(state, 'a'), false), 'b')
+  assert.equal(cycle(activate(state, 'c'), true), 'b')
 })

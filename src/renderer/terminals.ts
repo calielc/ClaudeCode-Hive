@@ -1,4 +1,5 @@
 import { FitAddon } from '@xterm/addon-fit'
+import { WebLinksAddon } from '@xterm/addon-web-links'
 import { Terminal } from '@xterm/xterm'
 import '@xterm/xterm/css/xterm.css'
 import type { PtyExit } from '@shared/types'
@@ -66,10 +67,14 @@ export function createEntry(id: string, folder: string, resume: boolean, theme: 
     cursorBlink: true,
     scrollback: 10000,
     allowProposedApi: true,
-    theme: toXtermTheme(theme)
+    theme: toXtermTheme(theme),
+    // Links that the program marks itself (OSC 8) open in the browser of the system too.
+    linkHandler: { activate: (_event, text) => window.hive.openExternal(text) }
   })
   const fit = new FitAddon()
   term.loadAddon(fit)
+  // Web addresses in the text, also when they wrap over several lines, open in the browser of the system.
+  term.loadAddon(new WebLinksAddon((_event, url) => window.hive.openExternal(url)))
   const element = document.createElement('div')
   element.className = 'terminal-host'
   const entry: TerminalEntry = { id, folder, resume, term, fit, element, opened: false, started: false, ready: false }
@@ -97,10 +102,12 @@ export function mountEntry(entry: TerminalEntry, container: HTMLElement): void {
     entry.term.open(entry.element)
     entry.opened = true
   }
-  requestAnimationFrame(() => {
+  // A timer, not requestAnimationFrame: a covered or minimized window does not run animation frames,
+  // and the session must start anyway.
+  setTimeout(() => {
     fitEntry(entry)
     void start(entry)
-  })
+  }, 0)
 }
 
 export function unmountEntry(entry: TerminalEntry, container: HTMLElement): void {
@@ -166,4 +173,39 @@ export function focusEntry(id: string): void {
   if (entry?.element.isConnected) {
     entry.term.focus()
   }
+}
+
+/** The text on the screen and in the scrollback of a terminal. Used by tests. */
+export function terminalText(id: string): string {
+  const entry = entries.get(id)
+  if (!entry) {
+    return ''
+  }
+  const buffer = entry.term.buffer.active
+  const lines: string[] = []
+  for (let index = 0; index < buffer.length; index += 1) {
+    lines.push(buffer.getLine(index)?.translateToString(true) ?? '')
+  }
+  return lines.join('\n').trim()
+}
+
+/** Where a text is on the screen of a terminal, in window coordinates. Used by tests to click a link. */
+export function pointOf(id: string, needle: string, offset = 0): { x: number; y: number } | null {
+  const entry = entries.get(id)
+  const screen = entry?.term.element?.querySelector('.xterm-screen')
+  if (!entry || !screen) {
+    return null
+  }
+  const buffer = entry.term.buffer.active
+  for (let row = 0; row < entry.term.rows; row += 1) {
+    const line = buffer.getLine(buffer.viewportY + row)?.translateToString(true) ?? ''
+    const column = line.indexOf(needle)
+    if (column >= 0) {
+      const rect = screen.getBoundingClientRect()
+      const cellWidth = rect.width / entry.term.cols
+      const cellHeight = rect.height / entry.term.rows
+      return { x: rect.left + (column + offset + 0.5) * cellWidth, y: rect.top + (row + 0.5) * cellHeight }
+    }
+  }
+  return null
 }
