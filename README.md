@@ -17,16 +17,20 @@ This is the Electron version. The earlier native macOS version in Swift is kept 
 - If a session finishes or needs you and Hive is not the active window, the system shows a notification.
 - Usage bars for the 5 hour window and the weekly limit.
 
+## More documentation
+
+- `docs/FEATURES.md` describes every product feature and the placement rules for panes and tabs.
+- `docs/TECH-STACK.md` describes the stack, the architecture, the data formats, the tests and the decisions.
+- `CLAUDE.md` holds the working rules for agents and people who change the code.
+
 ## Keys
 
-| Action | macOS | Windows and Linux |
-| --- | --- | --- |
-| Next tab, previous tab | Ctrl+Tab, Ctrl+Shift+Tab | Ctrl+Tab, Ctrl+Shift+Tab |
-| New session | Cmd+N | Ctrl+Shift+N |
-| Add folder | Cmd+O | Ctrl+Shift+O |
-| Search | Cmd+F | Ctrl+Shift+F |
-| Layout 1 to 4 | Cmd+Option+1 to 4 | Ctrl+Shift+Alt+1 to 4 |
-| Undock the selected session | Cmd+Shift+D | Ctrl+Shift+U |
+- Next tab and previous tab: Ctrl+Tab and Ctrl+Shift+Tab, on every system.
+- New session: Cmd+N on macOS, Ctrl+Shift+N elsewhere.
+- Add folder: Cmd+O on macOS, Ctrl+Shift+O elsewhere.
+- Search: Cmd+F on macOS, Ctrl+Shift+F elsewhere.
+- Layout 1 to 4: Cmd+Option+1 to 4 on macOS, Ctrl+Shift+Alt+1 to 4 elsewhere.
+- Undock the selected session: Cmd+Shift+D on macOS, Ctrl+Shift+U elsewhere.
 
 Plain Shift+Tab goes to Claude Code.
 
@@ -42,13 +46,13 @@ Plain Shift+Tab goes to Claude Code.
 
 `npm run dev` has hot reload for the interface. When you change React or CSS code, the window updates at once. When you change a file that holds the state of the app, the page reloads. After a reload the tabs come back, and they attach again to the Claude processes that still run, so no session is lost.
 
-`npm run dev:watch` also restarts the whole app when the main process or the preload script changes. A restart ends all terminals. Do not use it when you run Hive inside Hive, because it ends your own session.
+`npm run dev:watch` also restarts the whole app after a change in the main process or the preload script. A restart ends all terminals. Do not use it for Hive inside Hive, because it ends your own session.
 
 Other commands:
 
-    npm test          run the unit tests
-    npm run typecheck check the types
-    npm run dist      build an installer for the system you are on
+- `npm test` runs the unit tests.
+- `npm run typecheck` checks the types.
+- `npm run dist` builds an installer for the system you are on.
 
 The renderer is React with `xterm.js`. The main process runs the terminals with `node-pty`, reads the session files and sends notifications. Run `npx electron scripts/make-icon.cjs` to draw the icon again.
 
@@ -66,7 +70,7 @@ Without the hooks, every session shows as ready and the usage bars stay empty.
 
 - Sessions come from `~/.claude/projects/<folder>/*.jsonl`. Set `CLAUDE_CONFIG_DIR` to use another Claude Code folder.
 - A new session starts with `claude --session-id <id>`. An old one starts with `claude --resume <id>`.
-- Each session keeps running while its tab is open, also when no pane shows it.
+- Each session keeps running during the life of its tab, also while no pane shows it.
 
 ## Test the window
 
