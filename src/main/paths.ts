@@ -21,13 +21,18 @@ export function projectDirectory(folder: string): string {
  * so walk up to the folder that has `.git`. Without one, use the folder's own name.
  */
 export function repoName(workingDirectory: string): string {
+  return basename(repoPath(workingDirectory))
+}
+
+/** The folder of the git repository that holds the working directory, or the working directory itself. */
+export function repoPath(workingDirectory: string): string {
   const home = homedir()
   let current = workingDirectory
   while (dirname(current) !== current && current !== home) {
     if (existsSync(join(current, '.git'))) {
-      return basename(current)
+      return current
     }
     current = dirname(current)
   }
-  return basename(workingDirectory)
+  return workingDirectory
 }

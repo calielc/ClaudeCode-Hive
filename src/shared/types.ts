@@ -11,6 +11,8 @@ export interface SessionDetails {
   model?: string
   branch?: string
   repo?: string
+  /** The full path of the repository folder. */
+  repoPath?: string
   lastPrompt?: string
   agents: AgentInfo[]
 }
@@ -98,6 +100,10 @@ export interface HiveApi {
     onData(listener: (id: string, data: string) => void): () => void
     onExit(listener: (exit: PtyExit) => void): () => void
   }
+  /** The number of sessions that wait for the user, and a PNG data URL of the badge to show on the taskbar. */
+  setWaitingCount(count: number, badge: string): void
+  /** Opens a folder in the file manager of the system. */
+  openFolder(path: string): void
   /** Tells the main process which themes exist and which is current, for the Theme menu. */
   setThemeMenu(names: string[], current: string): void
   /** A theme chosen in the Theme menu. */

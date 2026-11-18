@@ -33,6 +33,10 @@ process.stdin.on('end', () => {
       if (state === 'waiting' && typeof data.message === 'string' && data.message.trim()) {
         record.message = data.message.trim().slice(0, 300)
       }
+      // permission_prompt means a yes or no question about a tool. The toast then offers Yes and No buttons.
+      if (state === 'waiting' && typeof data.notification_type === 'string') {
+        record.type = data.notification_type
+      }
       fs.writeFileSync(file, JSON.stringify(record))
     }
   } catch {}

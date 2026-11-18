@@ -1,14 +1,15 @@
-import { appendFileSync, existsSync, writeFileSync } from 'node:fs'
+import { execFile } from 'node:child_process'
+import { appendFileSync, existsSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, Notification, screen, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, Notification, screen, shell, Tray } from 'electron'
 import type { OpenTabRef, PtyAttachOptions } from '@shared/types'
 import { isAppUrl, isOpenable } from './external-url'
 import { hooksStatus, installHooks } from './hooks'
 import { PtyManager } from './pty'
 import { searchSessions } from './search'
 import { scan } from './sessions'
-import { readUsage, readWaitingMessage, StatusMonitor } from './status'
+import { readUsage, readWaitingInfo, StatusMonitor } from './status'
 
 const isMac = process.platform === 'darwin'
 const mainWindows = new Set<BrowserWindow>()
@@ -124,32 +125,86 @@ const ptys = new PtyManager(
   (exit) => broadcast('pty:exit', exit)
 )
 
-function notify(id: string, body: string): void {
+function reveal(id: string): void {
+  const target = undocked.get(id) ?? [...mainWindows][0]
+  if (target) {
+    target.show()
+    target.focus()
+  }
+  broadcast('windows:reveal', id)
+}
+
+// A toast that nothing refers to can be collected before the user presses a button on it.
+const liveToasts = new Set<Notification>()
+
+/** A toast for a session. A permission question gets Yes and No buttons that answer in the terminal. */
+function notify(id: string, body: string, permission = false): void {
   const tab = openTabs.find((item) => item.id === id)
   if (!tab || BrowserWindow.getAllWindows().some((window) => window.isFocused()) || !Notification.isSupported()) {
     return
   }
-  const notification = new Notification({ title: tab.title, body })
-  notification.on('click', () => {
-    const target = undocked.get(id) ?? [...mainWindows][0]
-    if (target) {
-      target.show()
-      target.focus()
-    }
-    broadcast('windows:reveal', id)
+  const notification = new Notification({
+    title: tab.title,
+    body,
+    ...(permission ? { actions: [{ type: 'button' as const, text: 'Yes' }, { type: 'button' as const, text: 'No' }] } : {})
   })
+  liveToasts.add(notification)
+  notification.on('click', () => reveal(id))
+  notification.on('action', (_event, index) => {
+    // Answer only while the session still waits for this question. Else the key would land in a later prompt.
+    void readWaitingInfo(id).then((info) => {
+      if (!info?.permission) {
+        return
+      }
+      // 1 picks Yes in the permission list. Escape says No.
+      ptys.write(id, index === 0 ? '1' : '\x1b')
+    })
+  })
+  notification.on('close', () => liveToasts.delete(notification))
   notification.show()
 }
 
 const monitor = new StatusMonitor((id, previous, next) => {
   if (next === 'waiting' && previous !== 'waiting') {
-    void readWaitingMessage(id).then((message) => notify(id, message ?? 'Needs your input'))
+    void readWaitingInfo(id).then((info) => notify(id, info?.message ?? 'Needs your input', info?.permission ?? false))
   } else if (next === 'ready' && previous === 'working') {
     notify(id, 'Finished')
   }
 })
 
+let tray: Tray | undefined
+
+/** The tray icon opens Hive. Its tooltip, the taskbar badge and the dock badge show how many sessions wait for you. */
+function createTray(): void {
+  tray = new Tray(nativeImage.createFromPath(iconPath()).resize({ width: 16, height: 16 }))
+  tray.setToolTip('Hive')
+  const showHive = (): void => {
+    const window = [...mainWindows][0] ?? createMainWindow()
+    window.show()
+    window.focus()
+  }
+  tray.on('click', showHive)
+  tray.setContextMenu(Menu.buildFromTemplate([{ label: 'Show Hive', click: showHive }, { label: 'Quit', role: 'quit' }]))
+}
+
+function showWaiting(count: number, badge: string): void {
+  tray?.setToolTip(count > 0 ? `Hive: ${count} waiting for you` : 'Hive')
+  if (process.platform === 'win32') {
+    const image = count > 0 && badge ? nativeImage.createFromDataURL(badge) : null
+    for (const window of mainWindows) {
+      window.setOverlayIcon(image, count > 0 ? `${count} waiting for you` : '')
+    }
+  } else {
+    app.setBadgeCount(count)
+  }
+}
+
 function registerIpc(): void {
+  ipcMain.on('badge:set', (_event, count: number, badge: string) => {
+    if (Number.isInteger(count) && count >= 0 && typeof badge === 'string' && badge.startsWith('data:image/png;base64,')) {
+      showWaiting(count, badge)
+    }
+  })
   ipcMain.handle('sessions:scan', (_event, folder: string, open: OpenTabRef[]) => scan(folder, open))
   ipcMain.handle('sessions:search', (_event, folder: string, text: string) => searchSessions(folder, text))
   ipcMain.handle('app:defaultFolder', () => (existsSync(join(homedir(), 'code')) ? join(homedir(), 'code') : homedir()))
@@ -161,6 +216,12 @@ function registerIpc(): void {
     return result.canceled ? null : result.filePaths[0]
   })
   ipcMain.on('app:openExternal', (_event, url: string) => openExternal(url))
+  // Only a folder opens. A file path could start a program.
+  ipcMain.on('app:openFolder', (_event, path: string) => {
+    if (typeof path === 'string' && existsSync(path) && statSync(path).isDirectory()) {
+      void shell.openPath(path)
+    }
+  })
   ipcMain.on('tabs:setOpen', (_event, tabs: OpenTabRef[]) => {
     openTabs = tabs
   })
@@ -215,7 +276,14 @@ app.setName('Hive')
 // Windows names the source of a toast after the app user model id. Without it, the toast says "Electron".
 // A packaged app uses its appId, which the installer shortcut carries. The dev app uses the plain name.
 if (process.platform === 'win32') {
-  app.setAppUserModelId(app.isPackaged ? 'com.calielc.hive' : 'Hive')
+  const appId = app.isPackaged ? 'com.calielc.hive' : 'Hive'
+  app.setAppUserModelId(appId)
+  // An app id with no shortcut falls back to the name of the exe, which is "Electron" in dev. A registry entry gives
+  // the id a name and an icon for toasts. It lives under the current user, so it needs no rights.
+  const key = `HKCU\\Software\\Classes\\AppUserModelId\\${appId}`
+  for (const [name, value] of [['DisplayName', 'Hive'], ['IconUri', iconPath()]]) {
+    execFile('reg', ['add', key, '/v', name, '/t', 'REG_SZ', '/d', value, '/f'], () => undefined)
+  }
 }
 
 if (process.env.HIVE_SCREENSHOT) {
@@ -257,6 +325,7 @@ void app.whenReady().then(() => {
     app.dock?.setIcon(nativeImage.createFromPath(iconPath()))
   }
   registerIpc()
+  createTray()
   const window = createMainWindow()
   void screenshotMode(window)
   monitor.start()

@@ -186,6 +186,17 @@ button {
   color: var(--muted);
 }
 
+/* A clickable pill: the same round shape as the other chips, with an outline and a pointer so it reads as a button. */
+.chip.chip-button {
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+
+.chip.chip-button:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
 .list h3.collapsible {
   cursor: pointer;
   user-select: none;
@@ -299,7 +310,8 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding: 1px 7px;
+  padding: 5px 11px;
+  line-height: 1.5;
   font-size: 11px;
   background: rgba(255, 255, 255, 0.09);
   border-radius: 999px;
@@ -482,6 +494,17 @@ button {
   background: none;
   border: 0;
   color: var(--muted);
+}
+
+/* The undock glyph comes from a fallback font with a tall line box. A fixed line height keeps the tab as low as before. */
+.tab .tab-close {
+  padding: 0 2px;
+  line-height: 16px;
+  height: 16px;
+}
+
+.tab .dot {
+  flex: none;
 }
 
 .tab-close:hover,

@@ -242,7 +242,20 @@ function SessionCard({ session, now }: { session: SessionInfo; now: number }) {
         <span className="age">{relativeAge(session.modified, now)}</span>
       </div>
       <div className="chips">
-        {details?.repo && <span className="chip wide" title={details.repo}>▤ {details.repo}</span>}
+        {details?.repo && (
+          <span
+            className={`chip wide ${details.repoPath ? 'chip-button' : ''}`}
+            title={details.repoPath ? `Open ${details.repoPath}` : details.repo}
+            onClick={(event) => {
+              if (details.repoPath) {
+                event.stopPropagation()
+                window.hive.openFolder(details.repoPath)
+              }
+            }}
+          >
+            ▤ {details.repo}
+          </span>
+        )}
         {details?.branch && <span className="chip wide" title={details.branch}>⎇ {details.branch}</span>}
       </div>
       <div className="chips">

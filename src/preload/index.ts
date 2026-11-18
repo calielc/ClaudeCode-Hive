@@ -28,6 +28,8 @@ const api: HiveApi = {
     onData: (listener) => listen<[string, string]>('pty:data', listener),
     onExit: (listener) => listen<[PtyExit]>('pty:exit', listener)
   },
+  setWaitingCount: (count, badge) => ipcRenderer.send('badge:set', count, badge),
+  openFolder: (path) => ipcRenderer.send('app:openFolder', path),
   setThemeMenu: (names, current) => ipcRenderer.send('theme:menu', names, current),
   onSetTheme: (listener) => listen<[string]>('theme:set', listener),
   windows: {

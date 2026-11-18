@@ -1,7 +1,7 @@
 import { open, readdir, readFile, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { AgentInfo, OpenTabRef, ScanResult, SessionDetails, SessionInfo, SessionState } from '@shared/types'
-import { hiveDirectory, projectDirectory, repoName } from './paths'
+import { hiveDirectory, projectDirectory, repoName, repoPath } from './paths'
 
 const NEW_SESSION_TITLE = 'New Session'
 const AGENT_STALE_MS = 15 * 60 * 1000
@@ -111,6 +111,7 @@ async function readDetails(file: string): Promise<SessionDetails> {
     }
     if (!details.repo && typeof json.cwd === 'string' && json.cwd) {
       details.repo = repoName(json.cwd)
+      details.repoPath = repoPath(json.cwd)
     }
     if (!details.model && json.type === 'assistant') {
       const model = (json.message as Json | undefined)?.model
@@ -232,7 +233,7 @@ async function openSession(ref: OpenTabRef, states: Map<string, SessionState>): 
   try {
     modified = (await stat(file)).mtimeMs
   } catch {
-    return { id: ref.id, title: ref.title, modified: Date.now(), state, details: { agents: [], repo: repoName(ref.folder) } }
+    return { id: ref.id, title: ref.title, modified: Date.now(), state, details: { agents: [], repo: repoName(ref.folder), repoPath: repoPath(ref.folder) } }
   }
   const found = await details(file, ref.id, directory, modified)
   const name = await title(file, ref.id, modified)
@@ -241,7 +242,7 @@ async function openSession(ref: OpenTabRef, states: Map<string, SessionState>): 
     title: name === NEW_SESSION_TITLE ? ref.title : name,
     modified,
     state,
-    details: { ...found, repo: found.repo ?? repoName(ref.folder) }
+    details: { ...found, repo: found.repo ?? repoName(ref.folder), repoPath: found.repoPath ?? repoPath(ref.folder) }
   }
 }
 

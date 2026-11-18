@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { cycleTabs, focusSelected, newSession, setTheme, startMainWindow } from './actions'
+import { drawBadge } from './badge'
 import { ContextMenu } from './components/ContextMenu'
 import { PaneLayout, TopBar } from './components/Panes'
 import { Sidebar } from './components/Sidebar'
@@ -22,7 +23,8 @@ function MainView() {
   const themeName = useStore((state) => state.themeName)
   const selectedTabId = useStore((state) => state.selectedTabId)
   const layout = useStore((state) => state.layout)
-  const hasTabs = useStore((state) => state.tabs.length > 0)
+  const waiting = useStore((state) => state.openSessions.filter((session) => session.state === 'waiting').length)
+  const hasTabs =useStore((state) => state.tabs.length > 0)
   const started = useRef(false)
 
   useEffect(() => {
@@ -58,6 +60,11 @@ function MainView() {
     window.addEventListener('focus', onWindowFocus)
     return undefined
   }, [])
+
+  // The taskbar badge and the tray tooltip show how many open sessions wait for the user.
+  useEffect(() => {
+    window.hive.setWaitingCount(waiting, waiting > 0 ? drawBadge(waiting) : '')
+  }, [waiting])
 
   // The Theme menu of the window lists the themes and marks the current one.
   useEffect(() => {

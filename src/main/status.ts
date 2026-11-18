@@ -38,11 +38,22 @@ export class StatusMonitor {
   }
 }
 
-/** The text of the last question of a waiting session, from its status file. Empty when there is none. */
-export async function readWaitingMessage(id: string): Promise<string | undefined> {
+export interface WaitingInfo {
+  /** The text of the question. */
+  message?: string
+  /** True when the session asks permission for a tool, which Yes and No answer. */
+  permission: boolean
+}
+
+/** The last question of a session, from its status file. It is undefined when the session does not wait. */
+export async function readWaitingInfo(id: string): Promise<WaitingInfo | undefined> {
   try {
     const json = JSON.parse(await readFile(join(hiveDirectory(), 'status', `${id}.json`), 'utf8')) as Json
-    return json.state === 'waiting' && typeof json.message === 'string' && json.message.trim() ? json.message.trim() : undefined
+    if (json.state !== 'waiting') {
+      return undefined
+    }
+    const message = typeof json.message === 'string' && json.message.trim() ? json.message.trim() : undefined
+    return { message, permission: json.type === 'permission_prompt' }
   } catch {
     return undefined
   }

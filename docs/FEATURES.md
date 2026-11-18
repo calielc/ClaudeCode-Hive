@@ -60,7 +60,7 @@ Eight colours mark sessions: red, orange, yellow, green, teal, blue, purple and 
 
 ## 7. Notifications
 
-The system shows a notification with the session name in two cases. A session open in Hive finishes (working to ready), or it needs input (it becomes waiting). It shows nothing while a Hive window has the focus. A click brings the window to the front and selects the session. Sessions that run outside Hive do not notify. The state comes from the hooks. `docs/TECH-STACK.md` describes them in section 8.
+The system shows a notification with the session name in two cases. A session open in Hive finishes (working to ready), or it needs input (it becomes waiting). It shows nothing while a Hive window has the focus. The text of a toast for a waiting session is the question that Claude Code asks. A permission question also gets "Yes" and "No" buttons. "Yes" sends 1 to the terminal, and "No" sends Escape. The buttons act only while the session still waits. A click on the toast brings the window to the front and selects the session. A tray icon opens Hive with a click. Its tooltip, a red badge on the taskbar icon (Windows) and the badge of the dock icon (macOS) show how many open sessions wait for you. Sessions that run outside Hive do not notify. The state comes from the hooks. `docs/TECH-STACK.md` describes them in section 8.
 
 ## 8. Usage limits
 
