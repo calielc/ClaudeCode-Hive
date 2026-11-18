@@ -28,6 +28,8 @@ const api: HiveApi = {
     onData: (listener) => listen<[string, string]>('pty:data', listener),
     onExit: (listener) => listen<[PtyExit]>('pty:exit', listener)
   },
+  setThemeMenu: (names, current) => ipcRenderer.send('theme:menu', names, current),
+  onSetTheme: (listener) => listen<[string]>('theme:set', listener),
   windows: {
     undock: (id, title) => ipcRenderer.send('windows:undock', id, title),
     dock: (id) => ipcRenderer.send('windows:dock', id),

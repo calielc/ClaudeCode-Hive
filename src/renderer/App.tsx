@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react'
-import { cycleTabs, focusSelected, newSession, startMainWindow } from './actions'
+import { cycleTabs, focusSelected, newSession, setTheme, startMainWindow } from './actions'
 import { ContextMenu } from './components/ContextMenu'
 import { PaneLayout, TopBar } from './components/Panes'
 import { Sidebar } from './components/Sidebar'
 import { UndockedView } from './components/UndockedView'
 import { shortcutFor } from './shortcuts'
-import { themeNamed } from './themes'
+import { themeNamed, THEMES } from './themes'
 import { useStore } from './state'
 
 export function App() {
@@ -48,6 +48,7 @@ function MainView() {
     }
     window.addEventListener('keydown', onKey, true)
     window.hive.windows.onCycleTabs((backwards) => cycleTabs(backwards))
+    window.hive.onSetTheme((name) => setTheme(name))
     // Typing must work right away after Alt-Tab back to Hive. A search field in use keeps the focus.
     const onWindowFocus = (): void => {
       if (document.activeElement?.tagName !== 'INPUT') {
@@ -57,6 +58,11 @@ function MainView() {
     window.addEventListener('focus', onWindowFocus)
     return undefined
   }, [])
+
+  // The Theme menu of the window lists the themes and marks the current one.
+  useEffect(() => {
+    window.hive.setThemeMenu(THEMES.map((theme) => theme.name), themeName)
+  }, [themeName])
 
   // The terminal of the selected pane gets the keyboard whenever the selection or the layout changes.
   useEffect(() => {

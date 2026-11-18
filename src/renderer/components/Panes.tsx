@@ -1,10 +1,10 @@
 import { useLayoutEffect, useRef, type DragEvent, type MouseEvent, type PointerEvent } from 'react'
-import { activateTab, closeTab, dropOnPane, newSession, selectPane, setLayout, setSplit, setTheme, undock } from '../actions'
+import { activateTab, closeTab, dropOnPane, newSession, selectPane, setLayout, setSplit, undock } from '../actions'
 import { CAPACITY, type LayoutMode } from '../panes'
 import { setState, useStore } from '../state'
 import { fitEntry, getEntry, mountEntry, unmountEntry } from '../terminals'
 import { endOfListProps, reorderProps } from './reorder'
-import { tagColor, THEMES } from '../themes'
+import { tagColor } from '../themes'
 
 const LAYOUTS: { mode: LayoutMode; title: string; icon: string }[] = [
   { mode: 'single', title: 'Single pane', icon: '▢' },
@@ -15,20 +15,12 @@ const LAYOUTS: { mode: LayoutMode; title: string; icon: string }[] = [
 
 export function TopBar() {
   const layout = useStore((state) => state.layout)
-  const themeName = useStore((state) => state.themeName)
   return (
     <div className="topbar">
       <button className="new-session" onClick={newSession} title="New session in the selected folder">
         + New Session
       </button>
       <TabBar />
-      <select className="theme-select" value={themeName} onChange={(event) => setTheme(event.target.value)} title="Terminal colour theme">
-        {THEMES.map((theme) => (
-          <option key={theme.name} value={theme.name}>
-            {theme.name}
-          </option>
-        ))}
-      </select>
       <div className="layouts">
         {LAYOUTS.map((item) => (
           <button key={item.mode} className={layout === item.mode ? 'active' : ''} title={item.title} onClick={() => setLayout(item.mode)}>

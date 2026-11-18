@@ -14,8 +14,8 @@ The owner is a developer who runs many sessions in parallel. The goals are a vie
 - **Search.** The field searches the names of the sessions and the full text of their conversations, including the work of sub agents. Names match at once. The conversation search starts 300 ms after the last key and needs 2 characters. A result that matches only in a conversation carries the note "found in the conversation". Escape clears the field.
 - **Status counts.** Three numbers: working, waiting, ready. They count the open sessions and the sessions of the last 24 hours.
 - **Open section.** One card for each session open in a tab, in tab order. It also holds a new session that has no file yet, and a tab from another folder.
-- **Last 24 hours section.** The sessions of the selected folder from the last day that are not open. One plain row for each session, with its age.
-- **Older section.** The rest of the sessions, as plain rows.
+- **Last 24 hours section.** The sessions of the selected folder from the last day that are not open. One plain row for each session, with its age. A click on the heading folds the section. It starts open.
+- **Older section.** The rest of the sessions, as plain rows. A click on the heading folds the section. It starts folded. Both headings show the number of sessions.
 - **One place for each session.** A session is never in two sections. Opening a session moves it up to Open. Closing its tab moves it back.
 - **Card content.** The state dot, the name and the age. Two chips for the repository (the folder that holds `.git`) and the branch. A chip for the model, for example "Sonnet 5.5". A chip for the number of running agents, in orange above zero. One line for each running agent with its model. The last prompt in two lines.
 - **Card marks.** A window icon marks a session in its own window. A blue border marks the selected card. A thin orange or red border marks a working or waiting session.
@@ -32,7 +32,7 @@ The owner is a developer who runs many sessions in parallel. The goals are a vie
 - **New session.** The "New Session" button and Cmd+N start a session in the selected folder.
 - **Process exit.** The tab closes after Claude ends, for example after `/exit`. A process that fails within 3 seconds keeps its tab, so the error stays readable.
 - **Keyboard focus.** The terminal of the selected pane gets the keyboard after a new selection or a layout change. It gets it again after the window returns to the front. A search field in use keeps the focus.
-- **Colour themes.** Six terminal themes: Tokyo Night (default), Dracula, Nord, Gruvbox Dark, Solarized Dark and Paper (light). The choice is saved and applies to all open terminals at once.
+- **Colour themes.** Six terminal themes: Tokyo Night (default), Dracula, Nord, Gruvbox Dark, Solarized Dark and Paper (light). The Theme menu in the menu bar picks one, and a mark shows the current theme. The choice is saved and applies to all open terminals at once.
 - **Links.** A click on a web address in the terminal opens it in the default browser of the system. This works for addresses that wrap over several lines, and for links that a program marks itself (OSC 8). Only `http`, `https` and `mailto` links open. A link never opens a window of the app.
 
 ## 4. Placement rules

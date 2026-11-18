@@ -140,22 +140,33 @@ function GroupedList() {
         </section>
       )}
       {lastDay.length > 0 && (
-        <section>
-          <h3>Last 24 hours</h3>
+        <CollapsibleSection title="Last 24 hours" count={lastDay.length} startOpen>
           {lastDay.map((session) => (
             <SessionRow key={session.id} session={session} now={now} />
           ))}
-        </section>
+        </CollapsibleSection>
       )}
       {older.length > 0 && (
-        <section>
-          <h3>Older than 1 day</h3>
+        <CollapsibleSection title="Older than 1 day" count={older.length} startOpen={false}>
           {older.map((session) => (
             <SessionRow key={session.id} session={session} now={now} />
           ))}
-        </section>
+        </CollapsibleSection>
       )}
     </div>
+  )
+}
+
+/** A section whose heading folds the rows away. The heading shows the number of sessions inside. */
+function CollapsibleSection({ title, count, startOpen, children }: { title: string; count: number; startOpen: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(startOpen)
+  return (
+    <section>
+      <h3 className="collapsible" onClick={() => setOpen(!open)} aria-expanded={open}>
+        <span className="chevron">{open ? '▾' : '▸'}</span> {title} <span className="section-count">{count}</span>
+      </h3>
+      {open && children}
+    </section>
   )
 }
 

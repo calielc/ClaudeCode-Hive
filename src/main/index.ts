@@ -224,16 +224,35 @@ if (process.env.HIVE_SCREENSHOT) {
   app.commandLine.appendSwitch('disable-backgrounding-occluded-windows')
 }
 
-void app.whenReady().then(() => {
+/** The application menu. The page sends the theme names and the current one, and the menu shows them as a Theme menu. */
+function buildMenu(themeNames: string[], currentTheme: string): void {
   Menu.setApplicationMenu(
     Menu.buildFromTemplate([
       ...(isMac ? [{ role: 'appMenu' as const }] : []),
       { role: 'fileMenu' },
       { role: 'editMenu' },
       { role: 'viewMenu' },
+      {
+        label: 'Theme',
+        submenu: themeNames.map((name) => ({
+          label: name,
+          type: 'radio' as const,
+          checked: name === currentTheme,
+          click: () => {
+            for (const window of mainWindows) {
+              window.webContents.send('theme:set', name)
+            }
+          }
+        }))
+      },
       { role: 'windowMenu' }
     ])
   )
+}
+
+void app.whenReady().then(() => {
+  buildMenu([], '')
+  ipcMain.on('theme:menu', (_event, names: string[], current: string) => buildMenu(names, current))
   if (isMac) {
     app.dock?.setIcon(nativeImage.createFromPath(iconPath()))
   }

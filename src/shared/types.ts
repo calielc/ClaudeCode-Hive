@@ -98,6 +98,10 @@ export interface HiveApi {
     onData(listener: (id: string, data: string) => void): () => void
     onExit(listener: (exit: PtyExit) => void): () => void
   }
+  /** Tells the main process which themes exist and which is current, for the Theme menu. */
+  setThemeMenu(names: string[], current: string): void
+  /** A theme chosen in the Theme menu. */
+  onSetTheme(listener: (name: string) => void): () => void
   windows: {
     undock(id: string, title: string): void
     dock(id: string): void

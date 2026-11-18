@@ -186,6 +186,25 @@ button {
   color: var(--muted);
 }
 
+.list h3.collapsible {
+  cursor: pointer;
+  user-select: none;
+}
+
+.list h3.collapsible:hover {
+  color: var(--text);
+}
+
+.chevron {
+  display: inline-block;
+  width: 10px;
+}
+
+.section-count {
+  font-weight: 400;
+  opacity: 0.7;
+}
+
 .row {
   display: flex;
   align-items: center;
@@ -468,14 +487,6 @@ button {
 .tab-close:hover,
 .pane-header button:hover {
   color: var(--text);
-}
-
-.theme-select {
-  flex: none;
-  padding: 3px 6px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
 }
 
 .layouts {
