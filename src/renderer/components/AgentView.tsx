@@ -3,6 +3,7 @@ import type { AgentSummary, TranscriptEntry } from '@shared/types'
 import { activateTab } from '../actions'
 import { shortModelName } from '../format'
 import { setState, useStore } from '../state'
+import { pressable } from './a11y'
 
 /** Polls a value from the main process while the component is mounted. */
 function usePolled<T>(load: () => Promise<T>, initial: T, intervalMs: number, key: string): T {
@@ -70,7 +71,7 @@ export function AgentList({ tabId, folder }: { tabId: string; folder: string }) 
   const visible = agents.filter((agent) => agent.running || agent.id === selected || (showDone && !dismissed.includes(agent.id)))
   return (
     <div className="agent-list" onClick={(event) => event.stopPropagation()}>
-      <div className={`agent-row ${selected === null ? 'active' : ''}`} onClick={() => choose(null)}>
+      <div className={`agent-row ${selected === null ? 'active' : ''}`} onClick={() => choose(null)} {...pressable(() => choose(null))}>
         <span className="agent-glyph">▣</span>
         <span className="agent-name">Main</span>
       </div>
@@ -80,6 +81,7 @@ export function AgentList({ tabId, folder }: { tabId: string; folder: string }) 
           className={`agent-row ${selected === agent.id ? 'active' : ''} ${agent.running ? '' : 'done'}`}
           title={agent.agentType ? `${agent.agentType}: ${agent.description}` : agent.description}
           onClick={() => choose(agent.id)}
+          {...pressable(() => choose(agent.id))}
         >
           <i className={`dot ${agent.running ? 'working' : 'ready'}`} />
           <span className="agent-type">{typeIcon(agent.agentType)}</span>
@@ -89,10 +91,19 @@ export function AgentList({ tabId, folder }: { tabId: string; folder: string }) 
             <span
               className="agent-dismiss"
               role="button"
+              tabIndex={0}
+              aria-label="Hide this agent"
               title="Hide this agent"
               onClick={(event) => {
                 event.stopPropagation()
                 setDismissed((current) => [...current, agent.id])
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  setDismissed((current) => [...current, agent.id])
+                }
               }}
             >
               ✕
@@ -101,7 +112,7 @@ export function AgentList({ tabId, folder }: { tabId: string; folder: string }) 
         </div>
       ))}
       {folded.length > 0 && (
-        <div className="agent-row more" onClick={() => setShowDone(!showDone)}>
+        <div className="agent-row more" onClick={() => setShowDone(!showDone)} {...pressable(() => setShowDone(!showDone))}>
           <span className="agent-name">{showDone ? 'Hide done' : `+${folded.length} done`}</span>
         </div>
       )}

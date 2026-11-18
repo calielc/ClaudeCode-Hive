@@ -4,6 +4,7 @@ import { activateTab, addFolder, installHooks, openSession, removeFolder, select
 import { abbreviatePath, countdown, relativeAge, shortModelName } from '../format'
 import { setState, useStore } from '../state'
 import { tagColor } from '../themes'
+import { pressable } from './a11y'
 import { AgentList } from './AgentView'
 import { reorderProps } from './reorder'
 
@@ -134,7 +135,6 @@ function GroupedList() {
     <div className="list">
       {open.length > 0 && (
         <section>
-          <h3>Open</h3>
           {open.map((session) => (
             <SessionCard key={session.id} session={session} now={now} />
           ))}
@@ -207,6 +207,7 @@ function SessionRow({ session, now, note }: { session: SessionInfo; now: number;
       draggable
       onDragStart={(event) => startDrag(event, session.id)}
       onClick={() => openSession(session)}
+      {...pressable(() => openSession(session))}
       onContextMenu={(event) => openMenu(event, session.id)}
     >
       <i className={`dot ${session.state}`} />
@@ -234,6 +235,7 @@ function SessionCard({ session, now }: { session: SessionInfo; now: number }) {
       style={color ? { background: `${color}33`, boxShadow: `inset 4px 0 0 ${color}` } : undefined}
       {...reorderProps(session.id, 'y')}
       onClick={() => activateTab(session.id)}
+      {...pressable(() => activateTab(session.id))}
       onContextMenu={(event) => openMenu(event, session.id)}
     >
       <div className="card-head">
@@ -245,7 +247,7 @@ function SessionCard({ session, now }: { session: SessionInfo; now: number }) {
       <div className="chips">
         {details?.repo && (
           <span
-            className={`chip wide ${details.repoPath ? 'chip-button' : ''}`}
+            className={`chip wide repo ${details.repoPath ? 'chip-button' : ''}`}
             title={details.repoPath ? `Open ${details.repoPath}` : details.repo}
             onClick={(event) => {
               if (details.repoPath) {

@@ -3,6 +3,7 @@ import { activateTab, closeTab, dropOnPane, newSession, selectPane, setLayout, s
 import { CAPACITY, type LayoutMode } from '../panes'
 import { setState, useStore } from '../state'
 import { fitEntry, getEntry, mountEntry, unmountEntry } from '../terminals'
+import { pressable } from './a11y'
 import { AgentTranscript } from './AgentView'
 import { endOfListProps, reorderProps } from './reorder'
 import { tagColor } from '../themes'
@@ -42,9 +43,14 @@ function TabBar() {
   const tags = useStore((state) => state.tags)
   const tabDrop = useStore((state) => state.tabDrop)
   const openSessions = useStore((state) => state.openSessions)
+  const bar = useRef<HTMLDivElement>(null)
+  // The selected tab scrolls into view when a pick, a new session or a key press selects a tab that the bar hides.
+  useLayoutEffect(() => {
+    bar.current?.querySelector('.tab.selected')?.scrollIntoView({ inline: 'nearest', block: 'nearest' })
+  }, [selected, tabs.length])
   // The bar scrolls sideways only when the tabs do not fit. Its scroll stops at the ends.
   return (
-    <div className="tabs" {...endOfListProps()}>
+    <div className="tabs" ref={bar} {...endOfListProps()}>
       {tabs.map((tab) => {
         const pane = slots.indexOf(tab.id)
         const color = tagColor(tags[tab.id])
@@ -55,6 +61,7 @@ function TabBar() {
             style={color ? { background: `${color}59` } : undefined}
             {...reorderProps(tab.id, 'x')}
             onClick={() => activateTab(tab.id)}
+            {...pressable(() => activateTab(tab.id))}
             onContextMenu={(event: MouseEvent) => {
               event.preventDefault()
               setState({ contextMenu: { x: event.clientX, y: event.clientY, sessionId: tab.id } })

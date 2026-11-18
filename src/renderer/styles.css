@@ -168,7 +168,53 @@ button {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 4px 8px 8px;
+  overscroll-behavior: contain;
+  padding: 4px 4px 8px 8px;
+}
+
+/*
+ * A thin scrollbar that blends into the dark panel, without the arrow buttons of the system. The thumb is faint, and it
+ * brightens when the pointer is over the area and again when it is over the thumb. The standard scrollbar-width and
+ * scrollbar-color properties are not used, because they would switch these rules off.
+ */
+.list::-webkit-scrollbar,
+.agent-list::-webkit-scrollbar,
+.agent-transcript::-webkit-scrollbar {
+  width: 10px;
+}
+
+.list::-webkit-scrollbar-track,
+.agent-list::-webkit-scrollbar-track,
+.agent-transcript::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.list::-webkit-scrollbar-button,
+.agent-list::-webkit-scrollbar-button,
+.agent-transcript::-webkit-scrollbar-button {
+  display: none;
+}
+
+.list::-webkit-scrollbar-thumb,
+.agent-list::-webkit-scrollbar-thumb,
+.agent-transcript::-webkit-scrollbar-thumb {
+  min-height: 32px;
+  background: rgba(255, 255, 255, 0.16);
+  background-clip: content-box;
+  border: 2px solid transparent;
+  border-radius: 999px;
+}
+
+.list:hover::-webkit-scrollbar-thumb,
+.agent-list:hover::-webkit-scrollbar-thumb,
+.agent-transcript:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.list::-webkit-scrollbar-thumb:hover,
+.agent-list::-webkit-scrollbar-thumb:hover,
+.agent-transcript::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.5);
 }
 
 .list.empty {
@@ -280,9 +326,10 @@ button {
   border-color: rgba(235, 77, 77, 0.6);
 }
 
+/* The selected card gets an outer ring, so the border still shows the state. */
 .card.selected {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent), 0 2px 6px rgba(0, 0, 0, 0.3);
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .card-head {
@@ -315,6 +362,18 @@ button {
 
 .chips > .chip.model {
   flex: 0 0 auto;
+}
+
+/* The repository name keeps its width up to a limit. The branch gives way first. */
+.chips > .chip.repo {
+  flex: 0 0 auto;
+  max-width: 45%;
+}
+
+/* Every control that is not a button can take the keyboard. The ring shows only for keys, not for clicks. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .chip {
@@ -495,7 +554,7 @@ button {
 
 .pane-badge {
   padding: 0 5px;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   background: rgba(91, 140, 255, 0.55);
   border-radius: 999px;
@@ -511,7 +570,8 @@ button {
 
 /* The undock glyph comes from a fallback font with a tall line box. A fixed line height keeps the tab as low as before. */
 .tab .tab-close {
-  padding: 0 2px;
+  padding: 0 4px;
+  margin: 0 -2px;
   line-height: 16px;
   height: 16px;
 }
@@ -599,8 +659,10 @@ button {
   border-color: rgba(235, 77, 77, 0.45);
 }
 
+/* The selected pane gets an outer ring. The border keeps the colour of the tag or the state. */
 .pane.active {
-  border: 2px solid var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .pane.drop {
@@ -649,6 +711,9 @@ button {
   flex-direction: column;
   gap: 2px;
   margin-top: 2px;
+  /* A long list scrolls inside the card, so the card stays short. */
+  max-height: 150px;
+  overflow-y: auto;
 }
 
 .agent-row {
@@ -675,12 +740,15 @@ button {
   opacity: 0.75;
 }
 
+/* The text of the "+N done" row lines up with the agent names: 8px dot, 7px gap and 12px icon, plus the row gap and padding. */
 .agent-row.more {
+  padding-left: 41px;
   color: var(--muted);
 }
 
+/* The glyph of the Main row is as wide as the dot, the gap and the icon of an agent row. The names then line up. */
 .agent-glyph {
-  width: 8px;
+  width: 27px;
   font-size: 10px;
   color: var(--muted);
   text-align: center;
@@ -706,12 +774,15 @@ button {
 .agent-model {
   flex: none;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
+/* The cross is small, but its click area is larger. The negative margin keeps the row as low as before. */
 .agent-dismiss {
+  padding: 5px 6px;
+  margin: -5px -4px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1;
 }
 

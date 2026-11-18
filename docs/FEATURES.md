@@ -13,7 +13,7 @@ The owner is a developer who runs many sessions in parallel. The goals are a vie
 - **Folder menu.** It selects the folder whose sessions are listed. The plus button adds a folder. The minus button removes the selected one from the list. The list and the selection are saved. The first start uses `~/code` as the folder. The home folder is the fallback for a machine without it.
 - **Search.** The field searches the names of the sessions and the full text of their conversations, including the work of sub agents. Names match at once. The conversation search starts 300 ms after the last key and needs 2 characters. A result that matches only in a conversation carries the note "found in the conversation". Escape clears the field.
 - **Status counts.** Three numbers: working, waiting, ready. They count the open sessions and the sessions of the last 24 hours.
-- **Open section.** One card for each session open in a tab, in tab order. It also holds a new session that has no file yet, and a tab from another folder.
+- **Open section.** It has no heading and comes first. One card for each session open in a tab, in tab order. It also holds a new session that has no file yet, and a tab from another folder.
 - **Last 24 hours section.** The sessions of the selected folder from the last day that are not open. One plain row for each session, with its age. A click on the heading folds the section. It starts open.
 - **Older section.** The rest of the sessions, as plain rows. A click on the heading folds the section. It starts folded. Both headings show the number of sessions.
 - **One place for each session.** A session is never in two sections. Opening a session moves it up to Open. Closing its tab moves it back.
@@ -73,5 +73,6 @@ The footer shows the 5 hour window and the weekly limit, and one bar for each mo
 - New session: Cmd+N on macOS, Ctrl+N elsewhere.
 - Search: Cmd+F on macOS, Ctrl+F elsewhere.
 - Copy, cut and paste: Ctrl+C, Ctrl+X and Ctrl+V on every system, and also Cmd+C, Cmd+X and Cmd+V on macOS. A terminal cannot cut, so cut copies. Ctrl+C and Ctrl+X without a selection still go to Claude Code. With an image on the clipboard, paste goes to Claude Code as its own image paste key (Ctrl+V, and Alt+V on Windows).
+- Cards, session rows, agent rows and tabs take the keyboard focus. Tab moves between them, and Enter or Space does what a click does. A ring shows the focused item.
 - Plain Shift+Tab goes to Claude Code. The code is in `src/renderer/shortcuts.ts`.
 
