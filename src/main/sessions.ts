@@ -46,7 +46,7 @@ function parse(line: string): Json | undefined {
   }
 }
 
-/** The name of a session: its /rename name, else the title Claude made, else the first prompt. */
+/** The name of a session: its /rename name (custom title or agent name, the later one wins), else the title Claude made, else the first prompt. */
 export async function readTitle(file: string): Promise<string | undefined> {
   // Titles are written again and again, so the end of the file has the latest.
   // Read a small tail first. Most sessions have a title there, and 700 big reads are slow.
@@ -56,7 +56,11 @@ export async function readTitle(file: string): Promise<string | undefined> {
     for (const line of await tailLines(file, chunk)) {
       if (line.includes('"custom-title"')) {
         const value = parse(line)?.customTitle
-        custom = typeof value === 'string' ? value : custom
+        custom = typeof value === 'string' && value ? value : custom
+      } else if (line.includes('"agent-name"')) {
+        // Newer Claude Code writes the /rename name here too, and sometimes only here.
+        const value = parse(line)?.agentName
+        custom = typeof value === 'string' && value ? value : custom
       } else if (line.includes('"ai-title"')) {
         const value = parse(line)?.aiTitle
         ai = typeof value === 'string' ? value : ai

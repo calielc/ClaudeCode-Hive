@@ -33,6 +33,16 @@ test('a session is named by /rename first, then by the title Claude made, then b
   assert.equal(title('empty'), 'New Session')
 })
 
+test('an agent name from /rename wins over an older title Claude made', async () => {
+  const { folder, directory } = setup()
+  writeFileSync(
+    join(directory, 'named.jsonl'),
+    line({ type: 'agent-name', agentName: 'my-new-name' }) + line({ type: 'ai-title', aiTitle: 'Old generated title' })
+  )
+  const { sessions } = await scan(folder, [])
+  assert.equal(sessions.find((session) => session.id === 'named')?.title, 'my-new-name')
+})
+
 test('sessions are sorted by last activity, newest first', async () => {
   const { folder, directory } = setup()
   writeFileSync(join(directory, 'old.jsonl'), line({ type: 'ai-title', aiTitle: 'Old' }))
