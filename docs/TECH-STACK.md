@@ -130,7 +130,15 @@ The scripts run with the real `node` that the login shell finds. Without Node, t
 - A window that other windows cover does not paint, and its picture shows an old frame. Test mode sets the Chromium switches that make the window paint at all times.
 - On macOS, `date +%N` does not work. Use plain `date` in fake commands.
 
-## 13. Decisions and why
+## 13. Pipelines and updates
+
+- `.github/workflows/ci.yml` runs on each push to `main` and on each pull request. It runs `npm ci`, `npm run typecheck`, `npm test` and `npm run build` on Ubuntu and on Windows. The install skips the Electron binary, because these steps do not need it.
+- `.github/workflows/audit.yml` runs `npm audit`. It runs when `package.json` or `package-lock.json` changes, and every Monday at 05:00 UTC. A finding of high severity or more in the packages that ship in the app fails the run. A finding in the build tools only gives a warning, because a fix does not always exist.
+- `renovate.json` configures Renovate. Renovate opens pull requests for updates on Monday before 06:00 (Amsterdam time). It groups the minor and patch updates of the dev packages and of the GitHub Actions. It waits 3 days after a release. A major update of `electron`, `node-pty`, `electron-builder` or `@xterm/xterm` gets its own pull request with the label `needs-manual-test`.
+- Renovate needs the Renovate GitHub App on the repository. The file alone does nothing until the owner installs the app.
+- Do not accept the `--force` fixes of `npm audit`. They downgrade Vite and electron-builder.
+
+## 14. Decisions and why
 
 - Electron, not Tauri. The terminal needs a pseudo terminal. `node-pty` has prebuilt binaries, so there is no Rust and no compile step. The owner knows TypeScript.
 - Hive replaces Swift in the same repository. The owner wanted one code base for all systems. The `swift-v1` tag keeps the old app.

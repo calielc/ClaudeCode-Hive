@@ -36,7 +36,8 @@ Hive is a desktop app that lists the Claude Code sessions of a folder and runs t
 - No real Claude session was driven in the Electron version. Tests use fake commands.
 - Notifications, real mouse drag and drop, and the Ctrl+Tab key press are not tested live. Synthetic events cover drag and drop and the link clicks.
 - The macOS builds are unsigned and not notarized.
-- `npm audit` lists 11 high findings. All come from `picomatch` in the build tools. The newest release (4.0.7) is still affected, so no fix exists yet. The production packages have no findings. Run `npm audit` after each update, and do not accept the `--force` fixes, because they downgrade Vite and electron-builder.
+- `npm audit` lists no findings on 2026-11-18. The audit workflow runs it on each change of the package files and every Monday. Run `npm audit` after each update. Do not accept the `--force` fixes, because they downgrade Vite and electron-builder.
+- Renovate opens the update pull requests. It needs the Renovate GitHub App on the repository. `docs/TECH-STACK.md`, section 13, describes the pipelines.
 - The settings of the former Swift app do not carry over.
 - A restart of the app ends all terminals. A separate long-lived process that owns the terminals will remove this limit and allow `dev:watch` inside Hive.
 - Tabs come back after a page reload, not after an app restart.

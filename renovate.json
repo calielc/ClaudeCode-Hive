@@ -1,0 +1,40 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Europe/Amsterdam",
+  "schedule": ["before 6am on monday"],
+  "dependencyDashboard": true,
+  "prConcurrentLimit": 5,
+  "minimumReleaseAge": "3 days",
+  "semanticCommits": "disabled",
+  "commitMessagePrefix": "chore:",
+  "labels": ["dependencies"],
+  "vulnerabilityAlerts": {
+    "labels": ["dependencies", "security"],
+    "schedule": ["at any time"]
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on the first day of the month"]
+  },
+  "packageRules": [
+    {
+      "description": "One pull request for the minor and patch updates of the build and test tools",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "dev dependencies"
+    },
+    {
+      "description": "One pull request for the minor and patch updates of the GitHub Actions",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "github actions"
+    },
+    {
+      "description": "Electron, the terminal and the packager are the packages that can break the app. Each major update gets its own pull request and a label.",
+      "matchPackageNames": ["electron", "node-pty", "electron-builder", "@xterm/xterm"],
+      "matchUpdateTypes": ["major"],
+      "labels": ["dependencies", "needs-manual-test"]
+    }
+  ]
+}
