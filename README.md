@@ -1,45 +1,72 @@
 # Hive
 
-Hive is a macOS app for working with many Claude Code sessions at once. It lists the sessions of a folder on the left and runs the real `claude` command in terminal panes on the right.
+Hive is a desktop app for working with many Claude Code sessions at once. It lists the sessions of a folder on the left and runs the real `claude` command in terminal panes on the right. It runs on macOS, Windows and Linux.
+
+This is the Electron version. The earlier native macOS version in Swift is kept in the git tag `swift-v1`.
 
 ## Features
 
 - The left panel shows the open sessions as cards on top, in tab order, then the sessions of the last 24 hours, then older ones.
-- Each card shows the repo, branch, model, running agents and last prompt.
+- Each card shows the repo, branch, model, running agents and the last prompt.
 - Live status per session (working, waiting for you, ready), taken from Claude Code hooks.
-- Full text search over names and conversations.
-- Layouts with 1, 2 or 4 panes. Select a pane, then pick a tab or session to put it there, or drag it onto a pane.
+- Full text search over the names and the conversations of the selected folder.
+- Layouts with 1, 2 or 4 panes. Select a pane, then pick a tab or a session to put it there. A tab that is already visible only selects its pane. You can also drag a session or a tab onto a pane.
 - Undock a session into its own window, for example on another display, and dock it again.
-- Colour tags for sessions and terminal colour themes.
-- If a session finishes or needs you and Hive is not the active app, macOS shows a notification.
+- Colour tags for sessions and six terminal colour themes.
+- If a session finishes or needs you and Hive is not the active window, the system shows a notification.
 - Usage bars for the 5 hour window and the weekly limit.
+
+## Keys
+
+| Action | macOS | Windows and Linux |
+| --- | --- | --- |
+| Next tab, previous tab | Ctrl+Tab, Ctrl+Shift+Tab | Ctrl+Tab, Ctrl+Shift+Tab |
+| New session | Cmd+N | Ctrl+Shift+N |
+| Add folder | Cmd+O | Ctrl+Shift+O |
+| Search | Cmd+F | Ctrl+Shift+F |
+| Layout 1 to 4 | Cmd+Option+1 to 4 | Ctrl+Shift+Alt+1 to 4 |
+| Undock the selected session | Cmd+Shift+D | Ctrl+Shift+U |
+
+Plain Shift+Tab goes to Claude Code.
 
 ## Requirements
 
-- macOS 14 or later.
-- Swift 5.9 or later. The Command Line Tools are enough, Xcode is not needed.
-- The `claude` command from Claude Code.
+- Node.js 20 or later, to build and run from source.
+- The `claude` command from Claude Code, on the path of your login shell.
 
-## Build and run
+## Develop
 
-Run a debug build:
+    npm install
+    npm run dev
 
-    scripts/dev.sh
+Other commands:
 
-Build `Hive.app` with its icon:
+    npm test          run the unit tests
+    npm run typecheck check the types
+    npm run dist      build an installer for the system you are on
 
-    scripts/bundle.sh
+The renderer is React with `xterm.js`. The main process runs the terminals with `node-pty`, reads the session files and sends notifications. Run `npx electron scripts/make-icon.cjs` to draw the icon again.
 
 ## Status hooks and usage limits
 
-Hive reads session status and usage limits from files that Claude Code writes through hooks and the status line. Install them once:
+Hive reads session status and usage limits from files that Claude Code writes through hooks and the status line. Click "Install hooks" in the left panel once. Hive then does the following:
 
-    scripts/install-hooks.py
+- It copies two small Node scripts to `~/.claude-sessions`.
+- It adds hooks to `~/.claude/settings.json` and wraps your status line command. The original status line command still runs with the same input.
+- It saves a backup of the settings file as `settings.json.bak-hive`, and it replaces the hooks of the older Python version. You can click the button again safely.
 
-The script copies helper scripts to `~/.claude-sessions`, adds hooks to `~/.claude/settings.json` and wraps your status line command. It saves a backup of the settings file first, and you can run it again safely. Without it, every session shows as ready and the usage bars stay empty.
+Without the hooks, every session shows as ready and the usage bars stay empty.
 
 ## How it works
 
-- Sessions come from `~/.claude/projects/<folder>/*.jsonl`.
-- Terminals use [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm).
+- Sessions come from `~/.claude/projects/<folder>/*.jsonl`. Set `CLAUDE_CONFIG_DIR` to use another Claude Code folder.
 - A new session starts with `claude --session-id <id>`. An old one starts with `claude --resume <id>`.
+- Each session keeps running while its tab is open, also when no pane shows it.
+
+## Test the window
+
+Set `HIVE_DEBUG=1` to get `window.__hive` in the page. Set `HIVE_PTY_COMMAND` to run a harmless command instead of Claude. Set `HIVE_SCREENSHOT=<file.png>` to save a picture of the window and quit, with `HIVE_EXEC_JS` to run a script first.
+
+## Windows
+
+The Windows build is not tested yet. Terminals use `cmd.exe`, and the session folder names follow the rule Claude Code uses for Windows paths.

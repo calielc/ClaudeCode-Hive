@@ -1,2 +1,6 @@
+node_modules/
+out/
+dist/
 .build/
 *.app
+.DS_Store
