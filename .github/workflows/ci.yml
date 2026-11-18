@@ -33,3 +33,29 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  e2e:
+    name: End-to-end tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    env:
+      # The terminal of Hive starts the shell of the user. A runner can have no SHELL value.
+      SHELL: /bin/bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      # This job needs the Electron binary, so the install does not skip it.
+      - run: npm ci
+      # Linux has no screen on a runner. xvfb gives Electron a virtual one.
+      - name: Run the tests (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run --auto-servernum npm run test:e2e
+      - name: Run the tests (Windows)
+        if: runner.os != 'Linux'
+        run: npm run test:e2e

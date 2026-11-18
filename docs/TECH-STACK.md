@@ -11,7 +11,7 @@ This file describes how Hive is built, how to run and test it, and why. `docs/FE
 - Terminal view: `@xterm/xterm` 6 with the fit and web links addons.
 - Terminal process: `node-pty` 1.1, with prebuilt binaries and no compile step.
 - Packaging: electron-builder 26.
-- Tests: `node:test`, run with `tsx`.
+- Tests: `node:test`, run with `tsx`. The end-to-end tests drive the real app with `playwright-core`.
 
 All direct packages had the latest version on 2026-11-18. The `overrides` entry in `package.json` forces `minimatch` to 11.0.1 or later. This fixes its advisory.
 
@@ -41,6 +41,7 @@ All direct packages had the latest version on 2026-11-18. The `overrides` entry 
 - `src/renderer/badge.ts`: draws the badge image for the number of waiting sessions.
 - `src/renderer/components/`: `Sidebar`, `Panes` (top bar, tabs, panes, splitters), `AgentView` (agent list and transcript), `ContextMenu`, `UndockedView`, `reorder` and `a11y`.
 - `src/renderer/themes.ts`, `format.ts`, `shortcuts.ts` and `styles.css`: themes and tag colors, formatting, keys and styles.
+- `e2e/`: the end-to-end tests. `app.ts` starts Hive, `fixture.ts` makes the fake sessions, and `fake-claude.cjs` replaces the `claude` command. See section 12.3.
 - `scripts/make-icon.cjs`: draws `build/icon.png`. Run it with `npx electron scripts/make-icon.cjs`.
 - `scripts/brand-electron.cjs`: gives the dev `Electron.app` the name and the icon of Hive. `npm run dev` runs it first.
 
@@ -110,6 +111,7 @@ The scripts run with the real `node` that the login shell finds. Without Node, t
 - After the start, the interface reloads hot. If you change a file with the app state, the page reloads and the tabs come back.
 - `npm run dev:watch` also restarts the whole app after a change in the main process. A restart ends all terminals. Do not use it for Hive inside Hive.
 - `npm test` runs 45 unit tests. They cover the placement rules, the tab reorder, the saved session, formatting, the scanner, the search, the paths, the link rules and the agent transcripts.
+- `npm run test:e2e` builds the app and runs the end-to-end tests. They start the real app, so they need a screen. See section 12.3.
 - `npm run typecheck`, `npm run build` and `npm run dist` (an installer for the current system) are also available.
 - The packaged macOS app is unsigned, because no Developer ID certificate exists. Open it with a right click and "Open".
 
@@ -130,9 +132,21 @@ The scripts run with the real `node` that the login shell finds. Without Node, t
 - A window that other windows cover does not paint, and its picture shows an old frame. Test mode sets the Chromium switches that make the window paint at all times.
 - On macOS, `date +%N` does not work. Use plain `date` in fake commands.
 
+### 12.3 End-to-end tests
+
+The tests in `e2e/` start the built app (`out/main/index.js`) with Playwright and use it like a user. They click, type and press keys, and they read the page. There is one file for each area: the left panel, the tabs and panes, the agents, and the keyboard and menus.
+
+- Each test file starts its own copy of Hive with a fresh fixture. The fixture is a throw-away home folder with four fake sessions, and it can hold fake agents. The run sets `HOME`, `USERPROFILE` and `CLAUDE_CONFIG_DIR` to this folder, and it uses its own `--user-data-dir`. A test never touches your real sessions and never disturbs a Hive that runs at the same time.
+- `fake-claude.cjs` replaces `claude` through `HIVE_PTY_COMMAND`. It prints `HIVE-E2E-READY` and echoes each input, so a test can see what the terminal sends.
+- The tests read the state of the page with `window.__hive`. This needs `HIVE_DEBUG=1`, which the launcher sets.
+- Use `eventually()` from `e2e/app.ts` for anything that changes after a delay, such as the list of agents, which refreshes every 2 seconds. Do not use fixed sleeps.
+- The files run one at a time. Each file starts and closes its own app, and a run takes about 10 seconds on a developer machine.
+- On Linux, the tests need a screen. Run them with `xvfb-run`. The launcher adds `--no-sandbox` on Linux.
+- The path of the repository must not contain a space, because the fake command is part of a shell command line.
+
 ## 13. Pipelines and updates
 
-- `.github/workflows/ci.yml` runs on each push to `main` and on each pull request. It runs `npm ci`, `npm run typecheck`, `npm test` and `npm run build` on Ubuntu and on Windows. The install skips the Electron binary, because these steps do not need it.
+- `.github/workflows/ci.yml` runs on each push to `main` and on each pull request. The job "Typecheck, test and build" runs `npm ci`, `npm run typecheck`, `npm test` and `npm run build` on Ubuntu and on Windows. The install skips the Electron binary, because these steps do not need it. The job "End-to-end tests" runs `npm run test:e2e` on both systems, with the Electron binary and, on Linux, with `xvfb-run`.
 - `.github/workflows/audit.yml` runs `npm audit`. It runs when `package.json` or `package-lock.json` changes, and every Monday at 05:00 UTC. A finding of high severity or more in the packages that ship in the app fails the run. A finding in the build tools only gives a warning, because a fix does not always exist.
 - `renovate.json` configures Renovate. Renovate opens pull requests for updates on Monday before 06:00 (Amsterdam time). It groups the minor and patch updates of the dev packages and of the GitHub Actions. It waits 3 days after a release. The next bullets say which updates merge on their own. A major update of `electron`, `node-pty`, `electron-builder` or `@xterm/xterm` gets its own pull request with the label `needs-manual-test`.
 - Renovate needs the Renovate GitHub App on the repository. The file alone does nothing until the owner installs the app.
