@@ -39,6 +39,8 @@ Plain Shift+Tab goes to Claude Code.
     npm install
     npm run dev
 
+`npm run dev` has hot reload. When you change the interface (React or CSS), the window updates at once and keeps its tabs. When you change the main process or the preload script, the app restarts, and its terminals end. Use `npm run dev:ui` to reload only the interface.
+
 Other commands:
 
     npm test          run the unit tests

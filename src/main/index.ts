@@ -46,6 +46,12 @@ function createMainWindow(): BrowserWindow {
   const window = baseWindow({ width: 1400, height: 860, minWidth: 900, minHeight: 500, title: 'Hive' })
   mainWindows.add(window)
   window.on('closed', () => mainWindows.delete(window))
+  // A reload (hot reload while developing, or Cmd+R) loses the tabs of the page, so the processes behind them must end too.
+  window.webContents.on('did-start-navigation', (_event, _url, isInPlace, isMainFrame) => {
+    if (isMainFrame && !isInPlace) {
+      ptys.killAll()
+    }
+  })
   loadRenderer(window)
   return window
 }
