@@ -65,7 +65,7 @@ The system shows a notification with the session name in two cases. A session op
 
 ## 8. Usage limits
 
-The footer shows the 5 hour window and the weekly limit, and one bar for each model limit of the account. Each bar shows the percent used and the time until reset. Bars turn orange at 60 percent and red at 85 percent. After the reset time of a window, the bar shows a dash and "reset" until the next update. A note appears for numbers older than 10 minutes. The numbers refresh only while a Claude Code session is open, because only the status line receives them. Without the hooks, the footer shows "Install hooks".
+The footer shows the 5 hour window and the weekly limit, and one bar for each model limit of the account. Each bar shows the percent used and the time until reset. A tooltip on the row gives the real date and time of the reset, in the time zone of the computer. Bars turn orange at 60 percent and red at 85 percent. After the reset time of a window, the bar shows a dash and "reset" until the next update. A note appears for numbers older than 10 minutes. The numbers refresh only while a Claude Code session is open, because only the status line receives them. Without the hooks, the footer shows "Install hooks".
 
 ## 9. Keys
 

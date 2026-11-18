@@ -281,6 +281,23 @@ function SessionCard({ session, now }: { session: SessionInfo; now: number }) {
   )
 }
 
+/** The tooltip of a usage row: the real date and time of the reset, in the time zone of this computer. */
+function resetTitle(resetsAt: number | null, rolledOver: boolean): string | undefined {
+  if (resetsAt === null) {
+    return undefined
+  }
+  const when = new Date(resetsAt).toLocaleString(undefined, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short'
+  })
+  return `${rolledOver ? 'Reset on' : 'Resets on'} ${when}`
+}
+
 function UsageBars() {
   const usage = useStore((state) => state.usage)
   const hooks = useStore((state) => state.hooks)
@@ -302,7 +319,7 @@ function UsageBars() {
         const percent = rolledOver ? null : window.percent
         const color = percent === null ? '#888' : percent >= 85 ? '#eb4d4d' : percent >= 60 ? '#f79433' : '#4dbf66'
         return (
-          <div className="usage-row" key={window.label}>
+          <div className="usage-row" key={window.label} title={resetTitle(window.resetsAt, rolledOver)}>
             <span className="usage-label">{window.label}</span>
             <div className="bar">
               <div className="bar-fill" style={{ width: `${Math.min(Math.max(percent ?? 0, 0), 100)}%`, background: color }} />
