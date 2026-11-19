@@ -8,7 +8,15 @@ Hive lists the Claude Code sessions of a folder on the left. It runs the real `c
 
 The owner is a developer who runs many sessions in parallel. The goals are a view of all sessions at a glance and fast switching. The app also puts sessions side by side. It signals a session that needs attention.
 
+![Hive with two sessions side by side](images/overview.png)
+
+All pictures in this file show demo data. The sessions, the folder and the terminals are made up. `npm run screenshots` takes them again from the real app.
+
 ## 2. The left panel
+
+<img src="images/left-panel.png" alt="The left panel: folder menu, search field, status counts, three open sessions as cards, the sessions of the last 24 hours and the usage limits" width="300">
+
+From the top: the folder menu and the search field, the counts of working, waiting and ready sessions, the open sessions as cards, the other sessions as rows, and the usage limits. The first card is selected. It has an agent list, with Main first.
 
 - **Hide the panel.** The button at the left of the top bar hides the whole left panel, and the same button shows it again. The key is Cmd+B on macOS and Ctrl+B elsewhere. The panes then use the full width. Hive saves the choice. The panel keeps its state while hidden. The search key shows the panel again and focuses the search field.
 - **Folder menu.** It selects the folder whose sessions are on the list. The plus button adds a folder. The minus button removes the selected folder from the list. Hive saves the list and the selection. The first start uses the home folder of the user. The menu shows the home folder as its own name. It shows other folders with "~" for the home folder.
@@ -24,7 +32,15 @@ The owner is a developer who runs many sessions in parallel. The goals are a vie
 - **Right-click menu.** The menu sets the color of every session. For an open session, it also has these items: go to tab, undock or dock, close tab.
 - **Usage footer.** See section 8.
 
+With the left panel hidden, the panes use the full width. The picture shows four sessions in the grid layout. Each session has its own color tag.
+
+![The grid layout with four terminals and the left panel hidden](images/left-panel-hidden.png)
+
 ## 3. Terminals and panes
+
+![The grid layout with four terminals and the left panel visible](images/grid.png)
+
+Four sessions in the grid layout. The blue ring marks the selected pane.
 
 - **Real terminals.** Each session runs `claude` in a pseudo terminal. A new session runs `claude --session-id <id>`. An old session runs `claude --resume <id>`. The login shell of the user runs the command. Because of this, a shell function with the name `claude` works.
 - **Layouts.** The layouts are single, side by side, stacked, and a 2 by 2 grid. The buttons are at the top right. Hive saves the layout. You can drag the dividers between panes. Hive saves their positions.
@@ -35,6 +51,11 @@ The owner is a developer who runs many sessions in parallel. The goals are a vie
 - **Agent list.** The card of an open session lists its agents under the chips. The first row is Main, the session itself. Each other row is an agent. It shows an icon for the type of the agent, the description, and the model. A session without agents shows no list. A list of more than about five rows scrolls inside the card.
 - **Agent status.** A dot shows if the agent still runs (orange) or is done (green). Done agents fold behind a row with the text "+N done". A small cross on a done agent hides it until the page reloads. A done agent leaves the list 30 minutes after it finishes. The agent that you have open stays in the list.
 - **Agent transcript.** A click on an agent replaces the terminal in the pane of that session with the transcript of the agent. A click on Main brings the terminal back. The terminal keeps running. The transcript is read only. It shows the prompt, the thinking, the results (folded), the tool calls (one line each) and the answers. It updates while the agent runs. It follows the end, unless you scroll up.
+
+![The transcript of an agent replaces the terminal of its session](images/agent-transcript.png)
+
+The picture shows the transcript of the agent "Find the QR login code". The terminal of the session keeps running behind it. A click on Main brings it back.
+
 - **Keyboard focus.** After a new selection or a layout change, the terminal of the selected pane gets the keyboard. It gets the keyboard again after the window returns to the front. A search field in use keeps the focus.
 - **Color themes.** Six terminal themes exist: Tokyo Night (default), Dracula, Nord, Gruvbox Dark, Solarized Dark and Paper (light). The Theme menu in the menu bar selects a theme. A mark shows the current theme. Hive saves the choice. It applies to all open terminals at once.
 - **Links.** A click on a web address in the terminal opens it in the default browser of the system. This works for addresses that wrap over several lines. It also works for links that a program marks itself (OSC 8). Only `http`, `https` and `mailto` links open. A link never opens a window of the app.

@@ -12,6 +12,7 @@ This file is the guide for any agent or person who starts new work on Hive. It g
 - Commit and push only after the owner asks. Commit messages use the form `type: description`, and the type chooses the next version (`feat` minor, `fix` and `perf` patch, `!` major, the rest no release). `docs/TECH-STACK.md`, section 14, has the rules. The repository author is the personal address in the local git identity.
 - Documentation and comments use plain English: short sentences, no contractions, no semicolons, no em-dashes, and the condition first. Do not use the modal verbs that the linter bans. Use `can`, `will` and `must`.
 - Write tests for new rules. Run `npm test`, `npm run typecheck` and `npm run lint` before you finish. `npm run lint:fix` formats the code and applies the safe fixes. A pre-commit hook (Husky) runs the lint on the staged files. Do not skip it with `--no-verify`. If you change the interface, also run `npm run test:e2e`, and add a test there for a new behavior. The e2e tests use their own data folder and do not disturb a running Hive.
+- After a change that you can see in the interface, run `npm run screenshots` and commit the new pictures in `docs/images`. The README has one picture, and `docs/FEATURES.md` has the others. They show demo data only. `docs/TECH-STACK.md`, section 12.4, has the details.
 - Tests use fake terminal commands, not the real `claude` command. `docs/TECH-STACK.md` explains how, in section 12.
 
 ## 2. The specs

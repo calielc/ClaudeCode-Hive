@@ -45,6 +45,7 @@ All direct packages had the latest version on 2026-11-18. The `overrides` entry 
 - `src/renderer/components/`: `Sidebar`, `Panes` (top bar, tabs, panes, splitters), `AgentView` (agent list and transcript), `ContextMenu`, `UndockedView`, `reorder` and `a11y`.
 - `src/renderer/themes.ts`, `format.ts`, `shortcuts.ts` and `styles.css`: themes and tag colors, formatting, keys and styles.
 - `e2e/`: the end-to-end tests. `app.ts` starts Hive, `fixture.ts` makes the fake sessions, and `fake-claude.cjs` replaces the `claude` command. See section 12.3.
+- `docs/images/`: the pictures of the documentation. `npm run screenshots` takes them with `e2e/screenshots.ts`. The script starts the real app on a made-up home folder with demo sessions, agents and usage numbers. `e2e/demo-claude.cjs` draws the demo terminals. See section 12.4.
 - `scripts/make-icon.cjs`: draws `build/icon.png`. Run it with `npx electron scripts/make-icon.cjs`.
 - `scripts/next-version.ts`, `git-version.ts` and `release-version.ts`: the rules for the version of a release, the reading of git, and the command that the release workflow runs. `scripts/dist.ts` builds a local installer with a draft version. See section 14.
 - `biome.json`, `.editorconfig`, `.gitattributes` and `.husky/pre-commit`: the lint and the style, the line endings and the commit hook. See section 11.1.
@@ -135,7 +136,7 @@ The scripts run with the real `node` that the login shell finds. Without Node, t
 ### 12.1 Test seams
 
 - `HIVE_DEBUG=1`: puts `window.__hive` in the page with all actions, `getState`, `terminalText` and `pointOf`.
-- `HIVE_PTY_COMMAND`: runs this command in each terminal instead of Claude.
+- `HIVE_PTY_COMMAND`: runs this command in each terminal instead of Claude. `{id}` in the command becomes the session id.
 - `HIVE_SCREENSHOT=<file.png>`: saves a picture of the window and quits. Other windows get `<file>.window1.png` and so on.
 - `HIVE_EXEC_JS`, `HIVE_WAIT_MS` and `HIVE_PROBE_JS`: run a script in the page, wait, then run a probe and print its result.
 - `HIVE_OPEN_LOG=<file>`: writes links to a file instead of an open in the browser.
@@ -163,6 +164,14 @@ The tests in `e2e/` start the built app (`out/main/index.js`) with Playwright an
 - The files run one at a time. Each file starts and closes its own app, and a run takes about 10 seconds on a developer machine.
 - On Linux, the tests need a screen. Run them with `xvfb-run`. The launcher adds `--no-sandbox` on Linux.
 - The path of the repository must not contain a space, because the fake command is part of a shell command line.
+
+### 12.4 Pictures for the documentation
+
+- Run `npm run screenshots` to take the pictures again. The command builds the app, starts it with `e2e/screenshots.ts` and saves the pictures in `docs/images`. It needs a screen.
+- The pictures show demo data only. The home folder is made up and has the name `acme-shop`. The sessions, the agents, the usage numbers and the terminals are made up. A picture never shows a real session, folder or file.
+- `e2e/demo-claude.cjs` replaces `claude` through `HIVE_PTY_COMMAND` with `{id}`. The last character of the session id chooses the scene that it draws.
+- Take the pictures again after a change that you can see in the interface, and commit the new files. A picture that no longer matches the app is worse than none.
+- A picture is a PNG of about 50 to 200 KB. Keep the number of pictures small, because each new version of a picture stays in the history of git.
 
 ## 13. Pipelines and updates
 
