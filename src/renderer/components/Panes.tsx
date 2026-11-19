@@ -13,6 +13,7 @@ import {
   selectPane,
   setLayout,
   setSplit,
+  toggleSidebar,
   undock,
 } from "../actions";
 import { CAPACITY, type LayoutMode } from "../panes";
@@ -32,8 +33,24 @@ const LAYOUTS: { mode: LayoutMode; title: string; icon: string }[] = [
 
 export function TopBar() {
   const layout = useStore((state) => state.layout);
+  const sidebarHidden = useStore((state) => state.sidebarHidden);
+  const hint = `${window.hive.platform === "darwin" ? "Cmd" : "Ctrl"}+B`;
+  const label = `${sidebarHidden ? "Show" : "Hide"} the left panel (${hint})`;
   return (
     <div className="topbar">
+      <button
+        type="button"
+        className="icon-button sidebar-toggle"
+        title={label}
+        aria-label={label}
+        aria-pressed={!sidebarHidden}
+        onClick={toggleSidebar}
+      >
+        <svg viewBox="0 0 14 12" width="14" height="12" aria-hidden="true">
+          <rect x="1" y="1" width="12" height="10" rx="1.5" />
+          <path d="M5 1v10" />
+        </svg>
+      </button>
       <button
         type="button"
         className="new-session"

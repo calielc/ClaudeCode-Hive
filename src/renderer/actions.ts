@@ -142,6 +142,11 @@ export function selectPane(index: number): void {
   applyPanes(selectPaneState(paneState(), index));
 }
 
+/** Hides the left panel, or shows it again. */
+export function toggleSidebar(): void {
+  setState((current) => ({ sidebarHidden: !current.sidebarHidden }));
+}
+
 export function setLayout(layout: LayoutMode): void {
   applyPanes(setLayoutState(paneState(), layout));
 }

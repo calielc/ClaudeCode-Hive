@@ -28,6 +28,7 @@ This is the Electron version. The earlier native macOS version in Swift is kept 
 - Next tab and previous tab: Ctrl+Tab and Ctrl+Shift+Tab, on every system.
 - New session: Cmd+N on macOS, Ctrl+N elsewhere.
 - Search: Cmd+F on macOS, Ctrl+F elsewhere.
+- Hide or show the left panel: Cmd+B on macOS, Ctrl+B elsewhere.
 
 Plain Shift+Tab goes to Claude Code.
 

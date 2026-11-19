@@ -47,6 +47,15 @@ button {
   height: 100%;
 }
 
+/* The panel stays mounted, so the search text and the polling keep their state. */
+.app.sidebar-hidden {
+  grid-template-columns: 1fr;
+}
+
+.app.sidebar-hidden .sidebar {
+  display: none;
+}
+
 /* Sidebar */
 .sidebar {
   display: flex;
@@ -94,6 +103,11 @@ button {
 
 .icon-button:hover {
   border-color: var(--accent);
+}
+
+.sidebar-toggle {
+  width: 30px;
+  height: 26px;
 }
 
 .search {

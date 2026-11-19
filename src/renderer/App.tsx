@@ -5,6 +5,7 @@ import {
   newSession,
   setTheme,
   startMainWindow,
+  toggleSidebar,
 } from "./actions";
 import { drawBadge } from "./badge";
 import { ContextMenu } from "./components/ContextMenu";
@@ -12,7 +13,7 @@ import { PaneLayout, TopBar } from "./components/Panes";
 import { Sidebar } from "./components/Sidebar";
 import { UndockedView } from "./components/UndockedView";
 import { shortcutFor } from "./shortcuts";
-import { useStore } from "./state";
+import { getState, setState, useStore } from "./state";
 import { THEMES, themeNamed } from "./themes";
 
 export function App() {
@@ -40,6 +41,7 @@ function MainView() {
         .length,
   );
   const hasTabs = useStore((state) => state.tabs.length > 0);
+  const sidebarHidden = useStore((state) => state.sidebarHidden);
   const started = useRef(false);
 
   useEffect(() => {
@@ -60,7 +62,16 @@ function MainView() {
       } else if (action.type === "newSession") {
         newSession();
       } else if (action.type === "search") {
-        window.dispatchEvent(new Event("hive:focus-search"));
+        // The search field sits in the left panel. A hidden panel comes back first.
+        if (getState().sidebarHidden) {
+          setState({ sidebarHidden: false });
+        }
+        setTimeout(
+          () => window.dispatchEvent(new Event("hive:focus-search")),
+          0,
+        );
+      } else if (action.type === "toggleSidebar") {
+        toggleSidebar();
       }
     };
     window.addEventListener("keydown", onKey, true);
@@ -99,7 +110,7 @@ function MainView() {
 
   return (
     <div
-      className="app"
+      className={`app ${sidebarHidden ? "sidebar-hidden" : ""}`}
       data-theme={themeName}
       style={
         { "--pane-bg": themeNamed(themeName).background } as React.CSSProperties

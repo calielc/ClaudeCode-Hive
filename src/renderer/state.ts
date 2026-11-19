@@ -20,6 +20,8 @@ export interface State extends PaneState {
   /** Where the vertical and the horizontal divider are, from 0 to 1. */
   splitX: number;
   splitY: number;
+  /** The left panel is hidden. The main area then fills the window. */
+  sidebarHidden: boolean;
   query: string;
   sessions: SessionInfo[];
   openSessions: SessionInfo[];
@@ -46,6 +48,7 @@ interface Saved {
   tags?: Record<string, string>;
   splitX?: number;
   splitY?: number;
+  sidebarHidden?: boolean;
 }
 
 function load(): Saved {
@@ -75,6 +78,7 @@ export function createInitialState(): State {
     tags: saved.tags ?? {},
     splitX: saved.splitX ?? 0.5,
     splitY: saved.splitY ?? 0.5,
+    sidebarHidden: saved.sidebarHidden ?? false,
     query: "",
     sessions: [],
     openSessions: [],
@@ -125,6 +129,7 @@ function persist(): void {
     tags: state.tags,
     splitX: state.splitX,
     splitY: state.splitY,
+    sidebarHidden: state.sidebarHidden,
   };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));

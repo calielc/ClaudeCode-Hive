@@ -3,7 +3,8 @@ const isMac = window.hive?.platform === "darwin";
 export type ShortcutAction =
   | { type: "cycle"; backwards: boolean }
   | { type: "newSession" }
-  | { type: "search" };
+  | { type: "search" }
+  | { type: "toggleSidebar" };
 
 /**
  * The keys Hive handles itself. On macOS the modifier is Cmd. On other systems, new session and search use
@@ -27,6 +28,9 @@ export function shortcutFor(event: KeyboardEvent): ShortcutAction | undefined {
     if (plain === "f") {
       return { type: "search" };
     }
+    if (plain === "b") {
+      return { type: "toggleSidebar" };
+    }
   }
   if (
     isMac &&
@@ -41,6 +45,9 @@ export function shortcutFor(event: KeyboardEvent): ShortcutAction | undefined {
     }
     if (key === "f") {
       return { type: "search" };
+    }
+    if (key === "b") {
+      return { type: "toggleSidebar" };
     }
   }
   return undefined;

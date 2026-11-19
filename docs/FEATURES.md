@@ -10,6 +10,7 @@ The owner is a developer who runs many sessions in parallel. The goals are a vie
 
 ## 2. The left panel
 
+- **Hide the panel.** The button at the left of the top bar hides the whole left panel, and the same button shows it again. The key is Cmd+B on macOS and Ctrl+B elsewhere. The panes then use the full width. Hive saves the choice. The panel keeps its state while hidden. The search key shows the panel again and focuses the search field.
 - **Folder menu.** It selects the folder whose sessions are on the list. The plus button adds a folder. The minus button removes the selected folder from the list. Hive saves the list and the selection. The first start uses the home folder of the user. The menu shows the home folder as its own name. It shows other folders with "~" for the home folder.
 - **Search.** The field searches the names of the sessions. It also searches the full text of the conversations, with the work of sub-agents. Names match at once. The search of conversations starts 300 ms after the last key. It needs 2 characters. A result that matches only in a conversation shows the note "found in the conversation". Escape clears the field.
 - **Status counts.** Three numbers show the sessions that work, wait and are ready. They count the open sessions and the sessions of the last 24 hours.
@@ -89,6 +90,7 @@ Eight colors mark sessions: red, orange, yellow, green, teal, blue, purple and p
 - Next tab and previous tab: Ctrl+Tab and Ctrl+Shift+Tab, on every system.
 - New session: Cmd+N on macOS and Ctrl+N on other systems.
 - Search: Cmd+F on macOS and Ctrl+F on other systems.
+- Hide or show the left panel: Cmd+B on macOS and Ctrl+B on other systems.
 - Copy, cut and paste: Ctrl+C, Ctrl+X and Ctrl+V work on every system. On macOS, Cmd+C, Cmd+X and Cmd+V also work. A terminal cannot cut, so cut copies. Ctrl+C and Ctrl+X without a selection still go to Claude Code. If an image is on the clipboard, paste goes to Claude Code as its own image paste key (Ctrl+V, and Alt+V on Windows).
 - Cards, session rows, agent rows and tabs take the keyboard focus. Tab moves the focus between them. Enter or Space does what a click does. A ring shows the focused item.
 - Plain Shift+Tab goes to Claude Code. The code is in `src/renderer/shortcuts.ts`.

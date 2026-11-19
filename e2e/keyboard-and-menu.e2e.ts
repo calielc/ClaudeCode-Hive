@@ -56,6 +56,48 @@ describe("the keyboard and the right-click menu", () => {
     );
   });
 
+  test("hides and shows the left panel with the button and with the key", async () => {
+    const { page } = hive;
+    const sidebar = page.locator(".sidebar");
+    const toggle = page.locator(".sidebar-toggle");
+    const key = process.platform === "darwin" ? "Meta+B" : "Control+B";
+    assert.equal(await sidebar.isVisible(), true);
+
+    await toggle.click();
+    await eventually(async () =>
+      assert.equal(await sidebar.isVisible(), false),
+    );
+    assert.equal((await hive.state()).sidebarHidden, true);
+    // The main area fills the window.
+    const widths = await page.evaluate(() => ({
+      main: document.querySelector(".main")?.getBoundingClientRect().width ?? 0,
+      window: window.innerWidth,
+    }));
+    assert.ok(widths.main >= widths.window - 1, JSON.stringify(widths));
+
+    await page.keyboard.press(key);
+    await eventually(async () => assert.equal(await sidebar.isVisible(), true));
+    assert.equal((await hive.state()).sidebarHidden, false);
+
+    await page.keyboard.press(key);
+    await eventually(async () =>
+      assert.equal(await sidebar.isVisible(), false),
+    );
+    // The search key brings the panel back and focuses the field.
+    await page.keyboard.press(
+      process.platform === "darwin" ? "Meta+F" : "Control+F",
+    );
+    await eventually(async () => assert.equal(await sidebar.isVisible(), true));
+    await eventually(async () =>
+      assert.equal(
+        await page
+          .locator(".search input")
+          .evaluate((el) => el === document.activeElement),
+        true,
+      ),
+    );
+  });
+
   test("sets a color from the right-click menu and removes it again", async () => {
     const { page } = hive;
     await row(page, "Refactor search").click({ button: "right" });

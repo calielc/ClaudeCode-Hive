@@ -19,6 +19,7 @@ export interface HiveState {
   detached: string[];
   agentViews: Record<string, string | null>;
   folders: string[];
+  sidebarHidden: boolean;
 }
 
 /** A running Hive with a fixture, and a few helpers to read it. */
