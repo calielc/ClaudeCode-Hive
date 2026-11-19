@@ -140,3 +140,11 @@ export function tab(page: Page, title: string): Locator {
     has: page.locator(".tab-title", { hasText: title }),
   });
 }
+
+/**
+ * After a new selection, the app moves the keyboard to the terminal at 0, 80 and 300 ms. A test that moves the focus
+ * itself, for example to a card, must wait until these moves are over. This is the one place for a fixed wait.
+ */
+export async function settleFocus(page: Page): Promise<void> {
+  await page.waitForTimeout(400);
+}
