@@ -158,6 +158,17 @@ export function dismissUpdate(): void {
   }
 }
 
+/**
+ * Shows the left panel if it is hidden, and focuses the search field. The field focuses itself in an effect, after the
+ * page has shown the panel. A field that is still hidden cannot take the focus.
+ */
+export function focusSearch(): void {
+  setState((current) => ({
+    sidebarHidden: false,
+    searchFocusRequest: current.searchFocusRequest + 1,
+  }));
+}
+
 /** Hides the left panel, or shows it again. */
 export function toggleSidebar(): void {
   setState((current) => ({ sidebarHidden: !current.sidebarHidden }));
@@ -364,7 +375,19 @@ export function setQuery(query: string): void {
   }, 300);
 }
 
+/**
+ * Gives the keyboard to the terminal of the selected pane. A text field that the user works in keeps the focus.
+ * The hidden text area of a terminal does not count, because it must give the focus to the selected terminal.
+ */
 export function focusSelected(): void {
+  const active = document.activeElement;
+  if (
+    active &&
+    (active.tagName === "INPUT" ||
+      (active.tagName === "TEXTAREA" && !active.closest(".xterm")))
+  ) {
+    return;
+  }
   const { selectedTabId } = getState();
   if (selectedTabId) {
     focusEntry(selectedTabId);

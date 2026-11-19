@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import {
   cycleTabs,
+  focusSearch,
   focusSelected,
   newSession,
   setTheme,
@@ -13,7 +14,7 @@ import { PaneLayout, TopBar } from "./components/Panes";
 import { Sidebar } from "./components/Sidebar";
 import { UndockedView } from "./components/UndockedView";
 import { shortcutFor } from "./shortcuts";
-import { getState, setState, useStore } from "./state";
+import { useStore } from "./state";
 import { THEMES, themeNamed } from "./themes";
 
 export function App() {
@@ -63,13 +64,7 @@ function MainView() {
         newSession();
       } else if (action.type === "search") {
         // The search field sits in the left panel. A hidden panel comes back first.
-        if (getState().sidebarHidden) {
-          setState({ sidebarHidden: false });
-        }
-        setTimeout(
-          () => window.dispatchEvent(new Event("hive:focus-search")),
-          0,
-        );
+        focusSearch();
       } else if (action.type === "toggleSidebar") {
         toggleSidebar();
       }
@@ -78,12 +73,7 @@ function MainView() {
     window.hive.windows.onCycleTabs((backwards) => cycleTabs(backwards));
     window.hive.onSetTheme((name) => setTheme(name));
     // Typing must work right away after Alt-Tab back to Hive. A search field in use keeps the focus.
-    const onWindowFocus = (): void => {
-      if (document.activeElement?.tagName !== "INPUT") {
-        focusSelected();
-      }
-    };
-    window.addEventListener("focus", onWindowFocus);
+    window.addEventListener("focus", focusSelected);
     return undefined;
   }, []);
 

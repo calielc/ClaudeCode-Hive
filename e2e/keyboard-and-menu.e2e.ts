@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
-import { card, eventually, type Hive, launchHive, row, tab } from "./app";
+import {
+  card,
+  eventually,
+  type Hive,
+  launchHive,
+  row,
+  settleFocus,
+  tab,
+} from "./app";
 import { IDS } from "./fixture";
 
 describe("the keyboard and the right-click menu", () => {
@@ -19,6 +27,7 @@ describe("the keyboard and the right-click menu", () => {
     await hive.page.keyboard.press("Enter");
     await tab(hive.page, "Write release notes").waitFor();
     assert.equal((await hive.state()).selectedTabId, IDS.plain);
+    await settleFocus(hive.page);
   });
 
   test("selects a tab with Enter or Space on its card", async () => {
@@ -28,12 +37,14 @@ describe("the keyboard and the right-click menu", () => {
     await eventually(async () =>
       assert.equal((await hive.state()).selectedTabId, IDS.login),
     );
+    await settleFocus(page);
 
     await card(page, "Write release notes").focus();
     await page.keyboard.press("Enter");
     await eventually(async () =>
       assert.equal((await hive.state()).selectedTabId, IDS.plain),
     );
+    await settleFocus(page);
 
     await card(page, "Fix login flow").focus();
     await page.keyboard.press("Space");
@@ -96,6 +107,36 @@ describe("the keyboard and the right-click menu", () => {
         true,
       ),
     );
+  });
+
+  test("the search key focuses the field of a hidden panel, also when the page is slow", async () => {
+    const { page } = hive;
+    const sidebar = page.locator(".sidebar");
+    const searchKey = process.platform === "darwin" ? "Meta+F" : "Control+F";
+    // A slow page makes the panel show later. The focus must wait for it.
+    const client = await page.context().newCDPSession(page);
+    await client.send("Emulation.setCPUThrottlingRate", { rate: 10 });
+    try {
+      for (let round = 0; round < 3; round += 1) {
+        await page.locator(".sidebar-toggle").click();
+        await eventually(async () =>
+          assert.equal(await sidebar.isVisible(), false),
+        );
+        await page.locator(".search input").evaluate((el) => el.blur());
+        await page.keyboard.press(searchKey);
+        await eventually(async () =>
+          assert.equal(
+            await page
+              .locator(".search input")
+              .evaluate((el) => el === document.activeElement),
+            true,
+          ),
+        );
+      }
+    } finally {
+      await client.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+    }
+    assert.equal(await sidebar.isVisible(), true);
   });
 
   test("sets a color from the right-click menu and removes it again", async () => {

@@ -27,6 +27,8 @@ export interface State extends PaneState {
   splitY: number;
   /** The left panel is hidden. The main area then fills the window. */
   sidebarHidden: boolean;
+  /** Counts the requests to focus the search field. The field focuses itself after the page shows it. */
+  searchFocusRequest: number;
   /** A newer release of Hive, found by the check in the main process. */
   update: UpdateInfo | null;
   /** The version whose notice the user closed. A newer version shows the notice again. */
@@ -89,6 +91,7 @@ export function createInitialState(): State {
     splitX: saved.splitX ?? 0.5,
     splitY: saved.splitY ?? 0.5,
     sidebarHidden: saved.sidebarHidden ?? false,
+    searchFocusRequest: 0,
     update: null,
     dismissedUpdate: saved.dismissedUpdate ?? "",
     query: "",
