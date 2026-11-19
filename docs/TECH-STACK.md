@@ -168,13 +168,25 @@ The tests in `e2e/` start the built app (`out/main/index.js`) with Playwright an
 
 ## 14. Releases
 
-The workflow `.github/workflows/release.yml` builds the installers and makes a draft release on GitHub.
+The workflow `.github/workflows/release.yml` gives each merge to `main` a version, builds the installers and makes a draft release on GitHub. The owner publishes the draft by hand.
 
-- To make a release, change `version` in `package.json` and commit it. Then push a tag with the same number and a leading `v`, for example `git tag v2.1.0` and `git push origin v2.1.0`. The workflow stops if the tag and the version differ.
+### 14.1 Versions
+
+- The version follows Semantic Versioning. The commit types decide it, as in Conventional Commits. A `feat` commit gives a minor version (2.0.0 to 2.1.0). A `fix` or `perf` commit gives a patch version (2.0.0 to 2.0.1). A `!` before the colon, as in `feat!: ...`, or a line that starts with `BREAKING CHANGE:` in the message, gives a major version (2.0.0 to 3.0.0).
+- The types `docs`, `test`, `chore`, `ci`, `build`, `style` and `refactor` make no release. Renovate uses `chore`, so a dependency update makes no release by itself.
+- The job "Choose the version" runs `scripts/release-version.ts`. It finds the highest tag `vX.Y.Z`, reads all commit messages since that tag and takes the biggest change. If there is none, the other jobs are skipped. The rules are in `scripts/next-version.ts`, and `scripts/next-version.test.ts` tests them.
+- The tag is the version. The file `package.json` keeps its old number in the repository, and nothing is committed to `main`. Inside the build, `npm version` sets the new number. The installers and the app itself then report the new version, and the update notice (section 9 of `docs/FEATURES.md`) compares against it.
+- The commit message is the title of the pull request when you squash merge. Squash merge the pull requests. The workflow `.github/workflows/pr-title.yml` fails if the title is not `type: description` with a known type. Add that check to the required checks of the ruleset if you want to enforce it.
+
+### 14.2 The release
+
 - The workflow builds on two runners. The Windows runner makes an NSIS installer (`Hive-<version>-win-x64.exe`). The macOS runner makes a `.dmg` and a `.zip` for Apple Silicon (`arm64`) and for Intel (`x64`).
-- Before the build, each runner runs `npm run typecheck` and `npm test`. After the build, it starts the unpacked app and runs `e2e/packaged.e2e.ts`. This test proves that the app starts and that the native module `node-pty` loads from the packaged files.
-- The `release` job collects the files and creates a draft release. The notes list the commits since the last tag, without the `chore`, `ci`, `docs` and `test` commits. The owner reads the notes and the files, and then publishes the draft. A tag with a hyphen, for example `v2.1.0-beta.1`, makes a pre-release.
+- Before the build, each runner runs `npm run typecheck`, `npm run lint` and `npm test`. After the build, it starts the unpacked app and runs `e2e/packaged.e2e.ts`. This test proves that the app starts, that the native module `node-pty` loads from the packaged files and that the app reports the version of the build.
+- The `release` job collects the files and creates a draft release with the title "Hive <version>". The notes list the commits since the last tag, without the `chore`, `ci`, `docs`, `test`, `build` and `style` commits.
+- The tag does not exist while the release is a draft. GitHub makes the tag `v<version>` on the commit of the build when the owner publishes the draft. The next version then counts from this tag.
+- Merges that come before the owner publishes the draft do not make a second version. Each run counts from the last published tag, so it covers all changes that are not published yet. It replaces the old draft. Only a draft with the marker `hive-auto-release` in its notes is replaced. A draft that the owner made by hand stays.
 - A run by hand (`workflow_dispatch`) builds the installers and keeps them as workflow artifacts for 7 days. It makes no release.
+- A tag that the owner pushes by hand starts nothing. The workflow starts only on a push to `main`.
 - `electron-builder` does not rebuild `node-pty` (`npmRebuild` is `false`), because the package has prebuilt binaries for all systems. A rebuild needs a C++ toolchain, and it fails on a plain Windows machine.
 - The installers are not signed with a trusted certificate. Windows SmartScreen warns about an unknown publisher. On macOS, the hook `scripts/ad-hoc-sign.cjs` gives the app an ad hoc signature, because Apple Silicon reports an unsigned app as damaged. The app is not notarized, so the user must open it once with a right click and "Open".
 - To sign the installers later, add the certificate as repository secrets and set the `CSC_LINK` and `CSC_KEY_PASSWORD` variables in the build step. The hook then does nothing on macOS. Notarization needs more settings.

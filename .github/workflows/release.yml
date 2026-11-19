@@ -1,21 +1,47 @@
 name: Release
 
+# Each push to main (a merged pull request) can make a new version. The commit types decide:
+# feat gives a minor version, fix and perf give a patch version, and a "!" or a BREAKING CHANGE line gives a major version.
+# Other types (docs, test, chore, ci) make no release.
+# The workflow builds the installers and makes a DRAFT release. The owner publishes the draft by hand.
+# The tag does not exist until the owner publishes the draft.
 on:
   push:
-    tags: ["v*"]
-  # A manual run builds the installers and keeps them as workflow artifacts for 7 days. It does not make a release.
+    branches: [main]
+  # A manual run builds the installers and keeps them as workflow artifacts for 7 days. It makes no release.
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# A run that waits is replaced by a newer one. A run that works is never stopped half way.
 concurrency:
-  group: release-${{ github.ref }}
+  group: release
   cancel-in-progress: false
 
 jobs:
+  version:
+    name: Choose the version
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.next.outputs.release }}
+      version: ${{ steps.next.outputs.version }}
+      previous: ${{ steps.next.outputs.previous }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The full history and the tags, to find the last release and the commits after it.
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - id: next
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/release-version.ts
+
   build:
     name: Build (${{ matrix.name }})
+    needs: version
+    if: needs.version.outputs.release == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -38,19 +64,20 @@ jobs:
           node-version: 24
           cache: npm
 
-      - name: Make sure that the tag matches the version in package.json
-        if: github.ref_type == 'tag'
-        shell: bash
-        run: |
-          version="$(node -p "require('./package.json').version")"
-          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
-            echo "The tag ${GITHUB_REF_NAME} does not match the version ${version} in package.json."
-            exit 1
-          fi
-
       - run: npm ci
+
       - run: npm run typecheck
+      - run: npm run lint
       - run: npm test
+
+      # The tag is the version. The file package.json keeps its old number in the repository.
+      # Inside this build, the number is set, so the installers and the app itself report the new version.
+      - name: Set the version
+        if: needs.version.outputs.release == 'true'
+        shell: bash
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: npm version "${VERSION}" --no-git-tag-version --allow-same-version
 
       # No certificate is configured. Windows skips the signing. The hook scripts/ad-hoc-sign.cjs signs the Mac app ad hoc.
       - name: Build the installers
@@ -81,11 +108,15 @@ jobs:
 
   release:
     name: Make the draft release
-    if: github.ref_type == 'tag'
-    needs: build
+    if: github.event_name == 'push' && needs.version.outputs.release == 'true'
+    needs: [version, build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.version.outputs.version }}
+      PREVIOUS: ${{ needs.version.outputs.previous }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -97,12 +128,13 @@ jobs:
 
       - name: Write the release notes
         run: |
-          previous="$(git describe --tags --abbrev=0 --match 'v[0-9]*' "${GITHUB_REF_NAME}^" 2>/dev/null || true)"
-          range="${previous:+${previous}..}${GITHUB_REF_NAME}"
+          range="${PREVIOUS:+${PREVIOUS}..}HEAD"
           {
+            # The marker tells the next run that it can replace this draft.
+            echo "<!-- hive-auto-release -->"
             echo "## Changes"
             echo
-            changes="$(git log --no-merges --pretty='- %s' "${range}" | grep -v -E '^- (chore|ci|docs|test)(\(.*\))?:' || true)"
+            changes="$(git log --no-merges --pretty='- %s' "${range}" | grep -v -E '^- (chore|ci|docs|test|build|style)(\(.*\))?:' || true)"
             if [ -n "${changes}" ]; then echo "${changes}"; else echo "- No change that users can see."; fi
             echo
             echo "## Install"
@@ -112,14 +144,23 @@ jobs:
           } > notes.md
           cat notes.md
 
-      # The release is a draft. The owner reads the notes and the files, and then publishes it.
-      - name: Create the draft release
-        env:
-          GH_TOKEN: ${{ github.token }}
+      # An earlier run can have left a draft for changes that are not published yet. This run covers those changes too,
+      # so the old draft goes. Only a draft with the marker goes. A draft that the owner made by hand stays.
+      - name: Remove the old automatic drafts
         run: |
-          prerelease=""
-          case "${GITHUB_REF_NAME}" in *-*) prerelease="--prerelease" ;; esac
-          gh release create "${GITHUB_REF_NAME}" installers/* \
-            --draft ${prerelease} \
-            --title "Hive ${GITHUB_REF_NAME#v}" \
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/releases" \
+            --jq '.[] | select(.draft and ((.body // "") | contains("hive-auto-release"))) | .id' |
+            while read -r id; do
+              echo "Remove the old draft ${id}."
+              gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${id}"
+            done
+
+      # The release is a draft. The owner reads the notes and the files, and then publishes it.
+      # GitHub makes the tag v<version> on the commit of this run when the owner publishes the draft.
+      - name: Create the draft release
+        run: |
+          gh release create "v${VERSION}" installers/* \
+            --draft \
+            --target "${GITHUB_SHA}" \
+            --title "Hive ${VERSION}" \
             --notes-file notes.md

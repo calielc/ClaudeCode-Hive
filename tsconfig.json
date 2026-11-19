@@ -21,5 +21,5 @@
     "types": ["node"],
     "paths": { "@shared/*": ["./src/shared/*"] }
   },
-  "include": ["src", "e2e", "electron.vite.config.ts"]
+  "include": ["src", "e2e", "scripts", "electron.vite.config.ts"]
 }

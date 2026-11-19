@@ -61,7 +61,7 @@ Other commands:
 - `npm run typecheck` checks the types.
 - `npm run dist` builds an installer for the system you are on.
 
-To make a release, change the version in `package.json`, commit it, and push a tag with the same number, for example `v2.1.0`. The release workflow builds the installers and makes a draft release. `docs/TECH-STACK.md`, section 14, describes it.
+Each merge to `main` can make a new version. The commit type decides: `feat` gives a minor version, `fix` and `perf` give a patch version, and `feat!:` or a `BREAKING CHANGE:` line gives a major version. The other types make no release. The release workflow builds the installers and makes a draft release. You publish the draft by hand. Squash merge the pull requests, and give each one a title in the form `type: description`. `docs/TECH-STACK.md`, section 14, describes it.
 
 The renderer is React with `xterm.js`. The main process runs the terminals with `node-pty`, reads the session files and sends notifications. Run `npx electron scripts/make-icon.cjs` to draw the icon again.
 
