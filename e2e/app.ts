@@ -20,6 +20,8 @@ export interface HiveState {
   agentViews: Record<string, string | null>;
   folders: string[];
   sidebarHidden: boolean;
+  update: { version: string; url: string } | null;
+  dismissedUpdate: string;
 }
 
 /** A running Hive with a fixture, and a few helpers to read it. */
@@ -38,7 +40,7 @@ type HiveSeam = { getState(): HiveState; terminalText(id: string): string };
 
 /** Starts the built app (`out/main/index.js`) against a fresh fixture. Run `npm run build` first. */
 export async function launchHive(
-  options: { fixture?: Fixture } = {},
+  options: { fixture?: Fixture; env?: Record<string, string> } = {},
 ): Promise<Hive> {
   const fixture = options.fixture ?? createFixture();
   const script = join(root, "e2e", "fake-claude.cjs").replace(/\\/g, "/");
@@ -70,6 +72,7 @@ export async function launchHive(
       ELECTRON_RENDERER_URL: "",
       HIVE_DEBUG: "1",
       HIVE_PTY_COMMAND: `node ${script}`,
+      ...options.env,
     },
   });
   const page = await app.firstWindow();

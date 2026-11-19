@@ -142,6 +142,22 @@ export function selectPane(index: number): void {
   applyPanes(selectPaneState(paneState(), index));
 }
 
+/** Opens the page of the newer release in the browser. */
+export function openUpdatePage(): void {
+  const { update } = getState();
+  if (update) {
+    hive().openExternal(update.url);
+  }
+}
+
+/** Closes the notice of the newer release. The next release shows it again. */
+export function dismissUpdate(): void {
+  const { update } = getState();
+  if (update) {
+    setState({ dismissedUpdate: update.version });
+  }
+}
+
 /** Hides the left panel, or shows it again. */
 export function toggleSidebar(): void {
   setState((current) => ({ sidebarHidden: !current.sidebarHidden }));
@@ -386,6 +402,10 @@ export async function startMainWindow(): Promise<void> {
       activateTab(id);
     }
   });
+  void hive()
+    .update.get()
+    .then((update) => setState({ update }));
+  hive().update.onAvailable((update) => setState({ update }));
   void refresh();
   void refreshUsage();
   void refreshHooks();

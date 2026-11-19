@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { after, before, describe, test } from "node:test";
 import { eventually, type Hive, launchHive, row, tab } from "./app";
 import { IDS } from "./fixture";
@@ -24,6 +26,16 @@ describe("the packaged app", {
     assert.equal(isPackaged, true);
     await row(hive.page, "Fix login flow").waitFor();
     await row(hive.page, "Write release notes").waitFor();
+  });
+
+  test("reports its own version, which the update check compares with", async () => {
+    const version = await hive.app.evaluate(({ app }) => app.getVersion());
+    const expected = (
+      JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")) as {
+        version: string;
+      }
+    ).version;
+    assert.equal(version, expected);
   });
 
   test("starts the terminal process inside the installer layout", async () => {

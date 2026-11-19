@@ -30,7 +30,7 @@ The owner is a developer who runs many sessions in parallel. The goals are a vie
 - **Layouts.** The layouts are single, side by side, stacked, and a 2 by 2 grid. The buttons are at the top right. Hive saves the layout. You can drag the dividers between panes. Hive saves their positions.
 - **Selected pane.** A blue ring marks the selected pane. It gets the next session that you pick. A click in a pane selects it.
 - **Tab bar.** Each tab shows the pane number in a split layout, the state dot, the name, a button to undock, and a close button. A window icon marks an undocked tab. The bar scrolls sideways only when the tabs do not fit. Its scroll stops at the ends. The selected tab scrolls into view.
-- **New session.** The "New Session" button starts a session in the selected folder. The keys for this are in section 9.
+- **New session.** The "New Session" button starts a session in the selected folder. The keys for this are in section 10.
 - **Process exit.** After Claude ends, for example after `/exit`, the tab closes. A process that fails within 3 seconds keeps its tab. Then the error stays readable.
 - **Agent list.** The card of an open session lists its agents under the chips. The first row is Main, the session itself. Each other row is an agent. It shows an icon for the type of the agent, the description, and the model. A session without agents shows no list. A list of more than about five rows scrolls inside the card.
 - **Agent status.** A dot shows if the agent still runs (orange) or is done (green). Done agents fold behind a row with the text "+N done". A small cross on a done agent hides it until the page reloads. A done agent leaves the list 30 minutes after it finishes. The agent that you have open stays in the list.
@@ -85,7 +85,16 @@ Eight colors mark sessions: red, orange, yellow, green, teal, blue, purple and p
 - The numbers refresh only while a Claude Code session is open, because only the status line receives them.
 - Without the hooks, the footer shows "Install hooks".
 
-## 9. Keys
+## 9. Updates
+
+- An installed Hive looks for a newer release on GitHub, 15 seconds after the start and then every 4 hours. It only reads the public list of releases. It sends no data about you.
+- If a newer release exists, a small notice "Update <version>" shows in the top bar, next to the layout buttons. A click opens the page of the release in your browser. You download and install the new version yourself.
+- The cross on the notice hides it for that version. A later release shows it again.
+- Drafts and pre-releases do not count. A check that fails, for example without a network, does nothing and tries again at the next time.
+- The app does not update itself. A restart of Hive ends all terminals, so you choose when to install.
+- A Hive that runs from the source code (`npm run dev`) does not check.
+
+## 10. Keys
 
 - Next tab and previous tab: Ctrl+Tab and Ctrl+Shift+Tab, on every system.
 - New session: Cmd+N on macOS and Ctrl+N on other systems.

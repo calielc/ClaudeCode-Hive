@@ -1,4 +1,9 @@
-import type { HooksStatus, SessionInfo, UsageSnapshot } from "@shared/types";
+import type {
+  HooksStatus,
+  SessionInfo,
+  UpdateInfo,
+  UsageSnapshot,
+} from "@shared/types";
 import { useSyncExternalStore } from "react";
 import { initialPaneState, type LayoutMode, type PaneState } from "./panes";
 import { loadSession, saveSession, type Tab } from "./session-persist";
@@ -22,6 +27,10 @@ export interface State extends PaneState {
   splitY: number;
   /** The left panel is hidden. The main area then fills the window. */
   sidebarHidden: boolean;
+  /** A newer release of Hive, found by the check in the main process. */
+  update: UpdateInfo | null;
+  /** The version whose notice the user closed. A newer version shows the notice again. */
+  dismissedUpdate: string;
   query: string;
   sessions: SessionInfo[];
   openSessions: SessionInfo[];
@@ -49,6 +58,7 @@ interface Saved {
   splitX?: number;
   splitY?: number;
   sidebarHidden?: boolean;
+  dismissedUpdate?: string;
 }
 
 function load(): Saved {
@@ -79,6 +89,8 @@ export function createInitialState(): State {
     splitX: saved.splitX ?? 0.5,
     splitY: saved.splitY ?? 0.5,
     sidebarHidden: saved.sidebarHidden ?? false,
+    update: null,
+    dismissedUpdate: saved.dismissedUpdate ?? "",
     query: "",
     sessions: [],
     openSessions: [],
@@ -130,6 +142,7 @@ function persist(): void {
     splitX: state.splitX,
     splitY: state.splitY,
     sidebarHidden: state.sidebarHidden,
+    dismissedUpdate: state.dismissedUpdate,
   };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));

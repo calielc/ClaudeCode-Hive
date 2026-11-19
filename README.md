@@ -16,6 +16,7 @@ This is the Electron version. The earlier native macOS version in Swift is kept 
 - Colour tags for sessions and six terminal colour themes.
 - If a session finishes or needs you and Hive is not the active window, the system shows a notification.
 - Usage bars for the 5 hour window and the weekly limit.
+- A notice in the top bar when a newer release exists. Hive checks every 4 hours. It does not update itself.
 
 ## More documentation
 

@@ -1,4 +1,4 @@
-import type { HiveApi, OpenTabRef, PtyExit } from "@shared/types";
+import type { HiveApi, OpenTabRef, PtyExit, UpdateInfo } from "@shared/types";
 import { contextBridge, ipcRenderer } from "electron";
 
 function listen<Args extends unknown[]>(
@@ -47,6 +47,11 @@ const api: HiveApi = {
   setThemeMenu: (names, current) =>
     ipcRenderer.send("theme:menu", names, current),
   onSetTheme: (listener) => listen<[string]>("theme:set", listener),
+  update: {
+    get: () => ipcRenderer.invoke("update:get"),
+    onAvailable: (listener) =>
+      listen<[UpdateInfo]>("update:available", listener),
+  },
   windows: {
     undock: (id, title) => ipcRenderer.send("windows:undock", id, title),
     dock: (id) => ipcRenderer.send("windows:dock", id),

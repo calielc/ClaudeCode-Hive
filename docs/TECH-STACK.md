@@ -34,6 +34,7 @@ All direct packages had the latest version on 2026-11-18. The `overrides` entry 
 - `src/main/status.ts`: watches the status files and reads the usage.
 - `src/main/hooks.ts` with `scripts/hook.cjs` and `scripts/statusline-tap.cjs`: the hook installer and the two scripts that it installs.
 - `src/main/external-url.ts`: the links that can open outside the app.
+- `src/main/update-check.ts`: the check for a newer release. It compares versions, reads the answer of the GitHub API and runs the timer.
 - `src/renderer/panes.ts`: the pure placement logic of `docs/FEATURES.md`, section 4.
 - `src/renderer/state.ts`: the store with the state shape, `setState`, `useStore` and the saving.
 - `src/renderer/actions.ts`: all actions, the polling, the search and the tab operations.
@@ -56,15 +57,15 @@ All direct packages had the latest version on 2026-11-18. The `overrides` entry 
 - Done agent: an agent is done when `finished` is true, or when its last message is an answer with no tool call. An agent whose transcript is quiet for 15 minutes also counts as done. The interface hides a done agent 30 minutes after the last change.
 - State of a session: `~/.claude-sessions/status/<session-id>.json` with `{"state":"working|waiting|ready","ts":...}`. The hooks write it. For a waiting session, the file also holds the `message` and the `type` of the question.
 - Usage: `~/.claude-sessions/usage.json` with `five_hour`, `seven_day` (`used_percentage` and `resets_at` in seconds) and `model_scoped`. The status line wrapper writes it.
-- Settings of Hive: the `localStorage` key `hive.settings.v1` holds the folders, the selected folder, the layout, the theme, the tags, the divider positions and whether the left panel is hidden.
+- Settings of Hive: the `localStorage` key `hive.settings.v1` holds the folders, the selected folder, the layout, the theme, the tags, the divider positions whether the left panel is hidden and the version whose update notice the user closed.
 - Open tabs: the `sessionStorage` key `hive.session.v1` holds the tabs, their order, the undocked tabs, the pane contents and the selected pane. It survives a page reload. It is gone after the window closes.
 
 ## 5. IPC
 
-- Calls with an answer: `sessions:scan`, `sessions:search`, `agents:list`, `agents:transcript`, `usage:read`, `hooks:status`, `hooks:install`, `dialog:pickFolder`, `app:defaultFolder` and `pty:attach`.
+- Calls with an answer: `sessions:scan`, `sessions:search`, `agents:list`, `agents:transcript`, `usage:read`, `hooks:status`, `hooks:install`, `dialog:pickFolder`, `app:defaultFolder` and `pty:attach` and `update:get`.
 - One call that the preload makes at start and waits for: `app:home`. It returns the home folder from the operating system, not from the `HOME` variable. A shell can set `HOME` to a path style that Windows does not use.
 - Messages without an answer: `tabs:setOpen`, `app:openExternal`, `app:openFolder`, `badge:set`, `theme:menu`, `pty:write`, `pty:resize`, `pty:kill`, `windows:undock`, `windows:dock`, `windows:nextDisplay` and `windows:setTitle`.
-- Events to the pages: `pty:data`, `pty:exit`, `windows:docked-back` and `windows:reveal`.
+- Events to the pages: `pty:data`, `pty:exit`, `windows:docked-back`, `windows:reveal` and `update:available`.
 
 ## 6. Terminal lifecycle
 
@@ -111,7 +112,7 @@ The scripts run with the real `node` that the login shell finds. Without Node, t
 - A new install of Electron resets this change. The next `npm run dev` sets it again.
 - After the start, the interface reloads hot. If you change a file with the app state, the page reloads and the tabs come back.
 - `npm run dev:watch` also restarts the whole app after a change in the main process. A restart ends all terminals. Do not use it for Hive inside Hive.
-- `npm test` runs 45 unit tests. They cover the placement rules, the tab reorder, the saved session, formatting, the scanner, the search, the paths, the link rules and the agent transcripts.
+- `npm test` runs 51 unit tests. They cover the placement rules, the tab reorder, the saved session, formatting, the scanner, the search, the paths, the link rules, the agent transcripts and the update check.
 - `npm run test:e2e` builds the app and runs the end-to-end tests. They start the real app, so they need a screen. See section 12.3.
 - `npm run typecheck`, `npm run lint`, `npm run build` and `npm run dist` (an installer for the current system) are also available. `npm run lint:fix` formats the code and applies the safe fixes.
 - The installers are not signed with a trusted certificate, because none exists. Section 14 has the details. On macOS, open the app with a right click and "Open".
@@ -133,6 +134,7 @@ The scripts run with the real `node` that the login shell finds. Without Node, t
 - `HIVE_SCREENSHOT=<file.png>`: saves a picture of the window and quits. Other windows get `<file>.window1.png` and so on.
 - `HIVE_EXEC_JS`, `HIVE_WAIT_MS` and `HIVE_PROBE_JS`: run a script in the page, wait, then run a probe and print its result.
 - `HIVE_OPEN_LOG=<file>`: writes links to a file instead of an open in the browser.
+- `HIVE_UPDATE_URL=<address>`: makes an app that is not installed check for updates at this address, which the tests answer with a local server. `HIVE_UPDATE_DELAY_MS` and `HIVE_UPDATE_INTERVAL_MS` change the times.
 
 ### 12.2 Lessons
 
@@ -176,7 +178,8 @@ The workflow `.github/workflows/release.yml` builds the installers and makes a d
 - `electron-builder` does not rebuild `node-pty` (`npmRebuild` is `false`), because the package has prebuilt binaries for all systems. A rebuild needs a C++ toolchain, and it fails on a plain Windows machine.
 - The installers are not signed with a trusted certificate. Windows SmartScreen warns about an unknown publisher. On macOS, the hook `scripts/ad-hoc-sign.cjs` gives the app an ad hoc signature, because Apple Silicon reports an unsigned app as damaged. The app is not notarized, so the user must open it once with a right click and "Open".
 - To sign the installers later, add the certificate as repository secrets and set the `CSC_LINK` and `CSC_KEY_PASSWORD` variables in the build step. The hook then does nothing on macOS. Notarization needs more settings.
-- The app has no automatic update.
+- The app does not update itself. An installed app checks the public list of releases of this repository (`https://api.github.com/repos/calielc/ClaudeCode-Hive/releases/latest`) 15 seconds after the start and every 4 hours. The call needs no token. GitHub allows 60 calls an hour for each address, which is far more than this needs. If the latest release has a higher version than `app.getVersion()`, the top bar shows a notice with a link to the page of the release. The check skips drafts and pre-releases, so a release is visible only after the owner publishes the draft.
+- A real self-update needs `electron-updater`. On macOS it also needs a Developer ID signature, which the app does not have. See the signing note above.
 
 ## 15. Decisions and why
 

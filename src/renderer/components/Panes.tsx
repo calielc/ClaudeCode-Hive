@@ -8,8 +8,10 @@ import {
 import {
   activateTab,
   closeTab,
+  dismissUpdate,
   dropOnPane,
   newSession,
+  openUpdatePage,
   selectPane,
   setLayout,
   setSplit,
@@ -60,6 +62,7 @@ export function TopBar() {
         + New Session
       </button>
       <TabBar />
+      <UpdateNotice />
       <div className="layouts">
         {LAYOUTS.map((item) => (
           <button
@@ -73,6 +76,36 @@ export function TopBar() {
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+/** A small notice that a newer release exists. A click opens its page. The cross closes the notice for that version. */
+function UpdateNotice() {
+  const update = useStore((state) => state.update);
+  const dismissed = useStore((state) => state.dismissedUpdate);
+  if (!update || update.version === dismissed) {
+    return null;
+  }
+  return (
+    <div className="update-notice">
+      <button
+        type="button"
+        className="update-link"
+        title={`Version ${update.version} is available. Open the download page.`}
+        onClick={openUpdatePage}
+      >
+        Update {update.version}
+      </button>
+      <button
+        type="button"
+        className="update-dismiss"
+        title="Hide this notice"
+        aria-label="Hide this notice"
+        onClick={dismissUpdate}
+      >
+        ✕
+      </button>
     </div>
   );
 }

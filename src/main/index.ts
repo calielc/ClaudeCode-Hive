@@ -22,6 +22,7 @@ import { PtyManager } from "./pty";
 import { searchSessions } from "./search";
 import { scan } from "./sessions";
 import { readUsage, readWaitingInfo, StatusMonitor } from "./status";
+import { RELEASES_URL, UpdateChecker } from "./update-check";
 
 const isMac = process.platform === "darwin";
 const mainWindows = new Set<BrowserWindow>();
@@ -93,6 +94,28 @@ function baseWindow(
     }
   });
   return window;
+}
+
+/**
+ * Looks for a newer release now and then. It runs in an installed app only. `HIVE_UPDATE_URL` points it at another
+ * address, with `HIVE_UPDATE_DELAY_MS` and `HIVE_UPDATE_INTERVAL_MS`, for tests.
+ */
+let updates: UpdateChecker | undefined;
+
+function startUpdateChecks(): void {
+  const url =
+    process.env.HIVE_UPDATE_URL ?? (app.isPackaged ? RELEASES_URL : "");
+  if (!url) {
+    return;
+  }
+  updates = new UpdateChecker({
+    current: app.getVersion(),
+    url,
+    delayMs: Number(process.env.HIVE_UPDATE_DELAY_MS) || undefined,
+    intervalMs: Number(process.env.HIVE_UPDATE_INTERVAL_MS) || undefined,
+    onFound: (info) => broadcast("update:available", info),
+  });
+  updates.start();
 }
 
 function broadcast(channel: string, ...args: unknown[]): void {
@@ -304,6 +327,7 @@ function registerIpc(): void {
   });
   ipcMain.handle("app:defaultFolder", () => homedir());
   ipcMain.handle("usage:read", () => readUsage());
+  ipcMain.handle("update:get", () => updates?.available ?? null);
   ipcMain.handle("hooks:status", () => hooksStatus());
   ipcMain.handle("hooks:install", () => installHooks());
   ipcMain.handle("dialog:pickFolder", async () => {
@@ -469,6 +493,7 @@ void app.whenReady().then(() => {
   const window = createMainWindow();
   void screenshotMode(window);
   monitor.start();
+  startUpdateChecks();
 
   app.on("activate", () => {
     if (mainWindows.size === 0) {
@@ -485,5 +510,6 @@ app.on("window-all-closed", () => {
 
 app.on("before-quit", () => {
   monitor.stop();
+  updates?.stop();
   ptys.killAll();
 });

@@ -92,6 +92,13 @@ export interface PtyExit {
   ranMs: number;
 }
 
+/** A newer release of Hive than the one that runs. */
+export interface UpdateInfo {
+  version: string;
+  /** The page of the release, where the user downloads the installer. */
+  url: string;
+}
+
 /** The API the preload script puts on `window.hive`. */
 export interface HiveApi {
   platform: string;
@@ -135,6 +142,12 @@ export interface HiveApi {
   setThemeMenu(names: string[], current: string): void;
   /** A theme chosen in the Theme menu. */
   onSetTheme(listener: (name: string) => void): () => void;
+  update: {
+    /** The newer release that the last check found, or null. */
+    get(): Promise<UpdateInfo | null>;
+    /** A check finds a newer release. */
+    onAvailable(listener: (info: UpdateInfo) => void): () => void;
+  };
   windows: {
     undock(id: string, title: string): void;
     dock(id: string): void;
