@@ -50,6 +50,8 @@ The installers for Windows and macOS are on the Releases page of this repository
     npm install
     npm run dev
 
+`npm install` also sets up a pre-commit hook that runs the lint on the files that you commit.
+
 `npm run dev` has hot reload for the interface. When you change React or CSS code, the window updates at once. When you change a file that holds the state of the app, the page reloads. After a reload the tabs come back, and they attach again to the Claude processes that still run, so no session is lost.
 
 `npm run dev:watch` also restarts the whole app after a change in the main process or the preload script. A restart ends all terminals. Do not use it for Hive inside Hive, because it ends your own session.

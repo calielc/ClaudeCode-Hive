@@ -123,6 +123,7 @@ The scripts run with the real `node` that the login shell finds. Without Node, t
 - Biome checks the code and formats it. The file `biome.json` holds the rules. The style is the common Prettier style: double quotes, semicolons, trailing commas, 80 columns and 2 spaces. Biome has these defaults, so the config only sets the spaces.
 - The lint rules are the recommended set, plus these errors: unused imports, variables and parameters, `any`, non-null assertions, floating promises, hook dependencies, `console`, import cycles and shadowed names. `console` is allowed in `scripts/`, in `e2e/` and in `src/main/index.ts`, because they print on purpose.
 - A rule that does not fit one place can be turned off there with a `biome-ignore` comment. The comment must give the reason after the colon.
+- Husky runs the hook `.husky/pre-commit` before each commit. The hook runs `biome check --staged`, so it checks only the files in the commit, and it never changes a file. If it finds a problem, the commit stops and the message says to run `npm run lint:fix`. `npm install` sets the hook up, through the `prepare` script, and it sets `core.hooksPath` to `.husky/_` for this clone. `git commit --no-verify` skips the hook. The CI runs the same lint on each pull request, so a skipped hook cannot reach `main`.
 - Every text file uses LF line endings. `.gitattributes` and `.editorconfig` set this, and Git does not convert line endings on this repository.
 
 ## 12. Tests with the real window
@@ -197,6 +198,7 @@ The workflow `.github/workflows/release.yml` gives each merge to `main` a versio
 
 ## 15. Decisions and why
 
+- Husky for the pre-commit hook. It is the common tool, and `.husky/pre-commit` is a plain file in the repository. Biome checks the staged files itself with `--staged`, so lint-staged is not needed.
 - Biome, not ESLint. TypeScript 7 is the native compiler and has no JavaScript API. `typescript-eslint` needs that API, so it cannot run on this project. Biome has its own parser, needs no other package, and does both lint and format. It has no rules that use the full type information. The compiler covers that part.
 - Electron, not Tauri. The terminal needs a pseudo terminal. `node-pty` has prebuilt binaries, so there is no Rust and no compile step. The owner knows TypeScript.
 - Hive replaces Swift in the same repository. The owner wanted one code base for all systems. The `swift-v1` tag keeps the old app.
