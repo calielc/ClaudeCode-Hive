@@ -98,7 +98,9 @@ function baseWindow(
 
 /**
  * Looks for a newer release now and then. It runs in an installed app only. `HIVE_UPDATE_URL` points it at another
- * address, with `HIVE_UPDATE_DELAY_MS` and `HIVE_UPDATE_INTERVAL_MS`, for tests.
+ * address, with `HIVE_UPDATE_DELAY_MS`, `HIVE_UPDATE_INTERVAL_MS` and `HIVE_UPDATE_RETRY_MS`, for tests. `HIVE_UPDATE_CURRENT_VERSION` replaces the version of the app, because an app that is not installed
+ * reports the version of Electron, or "0.0" on Linux. `HIVE_UPDATE_LOG` writes
+ * a line for each step to a file.
  */
 let updates: UpdateChecker | undefined;
 
@@ -108,11 +110,21 @@ function startUpdateChecks(): void {
   if (!url) {
     return;
   }
+  const logFile = process.env.HIVE_UPDATE_LOG;
   updates = new UpdateChecker({
-    current: app.getVersion(),
+    current: process.env.HIVE_UPDATE_CURRENT_VERSION ?? app.getVersion(),
     url,
     delayMs: Number(process.env.HIVE_UPDATE_DELAY_MS) || undefined,
     intervalMs: Number(process.env.HIVE_UPDATE_INTERVAL_MS) || undefined,
+    retryMs: Number(process.env.HIVE_UPDATE_RETRY_MS) || undefined,
+    log: logFile
+      ? (message) =>
+          appendFileSync(
+            logFile,
+            `${new Date().toISOString()} ${message}
+`,
+          )
+      : undefined,
     onFound: (info) => broadcast("update:available", info),
   });
   updates.start();

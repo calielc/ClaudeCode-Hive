@@ -64,26 +64,25 @@ export function parseRelease(json: unknown): UpdateInfo | undefined {
   return { version: tag.trim().replace(/^v/i, ""), url };
 }
 
-/** Asks for the latest release. Any failure, such as no network, gives nothing. */
+/**
+ * Asks for the latest release. It gives nothing when the answer is not a usable release, for example a draft.
+ * It throws when the request fails, so the caller can try again soon.
+ */
 export async function fetchLatest(
   url: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<UpdateInfo | undefined> {
-  try {
-    const response = await fetchFn(url, {
-      headers: {
-        Accept: "application/vnd.github+json",
-        "User-Agent": "Hive-update-check",
-      },
-      signal: AbortSignal.timeout(15_000),
-    });
-    if (!response.ok) {
-      return undefined;
-    }
-    return parseRelease(await response.json());
-  } catch {
-    return undefined;
+  const response = await fetchFn(url, {
+    headers: {
+      Accept: "application/vnd.github+json",
+      "User-Agent": "Hive-update-check",
+    },
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) {
+    throw new Error(`The answer was ${response.status}.`);
   }
+  return parseRelease(await response.json());
 }
 
 export interface UpdateCheckerOptions {
@@ -94,51 +93,88 @@ export interface UpdateCheckerOptions {
   intervalMs?: number;
   /** Time before the first check, so the start of the app stays fast. */
   delayMs?: number;
+  /** Time before the next try after a check failed, for example without a network. */
+  retryMs?: number;
+  /** Gets a line for each step. For tests and for finding faults. */
+  log?: (message: string) => void;
   fetchFn?: typeof fetch;
 }
 
-/** Checks for a newer release now and then. It tells the caller once for each new version. */
+/** After this many failed checks in a row, the checker waits the normal time again. */
+const MAX_QUICK_RETRIES = 3;
+
+/**
+ * Checks for a newer release now and then. It tells the caller once for each new version.
+ * A failed check, for example on a laptop that wakes up without a network, tries again soon and not after hours.
+ */
 export class UpdateChecker {
   available: UpdateInfo | undefined;
   private readonly options: UpdateCheckerOptions;
-  private timers: NodeJS.Timeout[] = [];
+  private timer: NodeJS.Timeout | undefined;
+  private failures = 0;
+  private stopped = false;
 
   constructor(options: UpdateCheckerOptions) {
     this.options = options;
   }
 
-  async check(): Promise<void> {
-    const found = await fetchLatest(this.options.url, this.options.fetchFn);
+  private log(message: string): void {
+    this.options.log?.(message);
+  }
+
+  /** One check. It gives true if the request worked, with or without a newer release. */
+  async check(): Promise<boolean> {
+    let found: UpdateInfo | undefined;
+    try {
+      found = await fetchLatest(this.options.url, this.options.fetchFn);
+    } catch (error) {
+      this.log(`The check failed: ${String(error)}`);
+      return false;
+    }
+    this.log(
+      `The check worked. The latest release is ${found?.version ?? "none"}.`,
+    );
     if (
       found &&
       isNewer(found.version, this.options.current) &&
       found.version !== this.available?.version
     ) {
       this.available = found;
-      this.options.onFound(found);
+      try {
+        this.options.onFound(found);
+      } catch (error) {
+        // The release is kept in `available`, so a page that loads later can still ask for it.
+        this.log(`The message to the windows failed: ${String(error)}`);
+      }
     }
+    return true;
   }
 
   start(): void {
-    const first = setTimeout(
-      () => void this.check(),
-      this.options.delayMs ?? 15_000,
+    this.stopped = false;
+    this.schedule(this.options.delayMs ?? 15_000);
+  }
+
+  private schedule(delayMs: number): void {
+    if (this.stopped) {
+      return;
+    }
+    this.timer = setTimeout(() => void this.run(), delayMs);
+  }
+
+  private async run(): Promise<void> {
+    const worked = await this.check();
+    this.failures = worked ? 0 : this.failures + 1;
+    const interval = this.options.intervalMs ?? FOUR_HOURS_MS;
+    const retry = this.options.retryMs ?? 60_000;
+    this.schedule(
+      worked || this.failures > MAX_QUICK_RETRIES ? interval : retry,
     );
-    const repeat = setInterval(
-      () => void this.check(),
-      this.options.intervalMs ?? FOUR_HOURS_MS,
-    );
-    // A pending check must not keep the app alive.
-    first.unref();
-    repeat.unref();
-    this.timers = [first, repeat];
   }
 
   stop(): void {
-    for (const timer of this.timers) {
-      clearTimeout(timer);
-      clearInterval(timer);
-    }
-    this.timers = [];
+    this.stopped = true;
+    clearTimeout(this.timer);
+    this.timer = undefined;
   }
 }

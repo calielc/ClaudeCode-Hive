@@ -112,7 +112,7 @@ The scripts run with the real `node` that the login shell finds. Without Node, t
 - A new install of Electron resets this change. The next `npm run dev` sets it again.
 - After the start, the interface reloads hot. If you change a file with the app state, the page reloads and the tabs come back.
 - `npm run dev:watch` also restarts the whole app after a change in the main process. A restart ends all terminals. Do not use it for Hive inside Hive.
-- `npm test` runs 51 unit tests. They cover the placement rules, the tab reorder, the saved session, formatting, the scanner, the search, the paths, the link rules, the agent transcripts and the update check.
+- `npm test` runs 61 unit tests. They cover the placement rules, the tab reorder, the saved session, formatting, the scanner, the search, the paths, the link rules, the agent transcripts, the update check and the version rules of the releases.
 - `npm run test:e2e` builds the app and runs the end-to-end tests. They start the real app, so they need a screen. See section 12.3.
 - `npm run typecheck`, `npm run lint`, `npm run build` and `npm run dist` (an installer for the current system) are also available. `npm run lint:fix` formats the code and applies the safe fixes.
 - The installers are not signed with a trusted certificate, because none exists. Section 14 has the details. On macOS, open the app with a right click and "Open".
@@ -134,7 +134,7 @@ The scripts run with the real `node` that the login shell finds. Without Node, t
 - `HIVE_SCREENSHOT=<file.png>`: saves a picture of the window and quits. Other windows get `<file>.window1.png` and so on.
 - `HIVE_EXEC_JS`, `HIVE_WAIT_MS` and `HIVE_PROBE_JS`: run a script in the page, wait, then run a probe and print its result.
 - `HIVE_OPEN_LOG=<file>`: writes links to a file instead of an open in the browser.
-- `HIVE_UPDATE_URL=<address>`: makes an app that is not installed check for updates at this address, which the tests answer with a local server. `HIVE_UPDATE_DELAY_MS` and `HIVE_UPDATE_INTERVAL_MS` change the times.
+- `HIVE_UPDATE_URL=<address>`: makes an app that is not installed check for updates at this address, which the tests answer with a local server. `HIVE_UPDATE_DELAY_MS`, `HIVE_UPDATE_INTERVAL_MS` and `HIVE_UPDATE_RETRY_MS` change the times. `HIVE_UPDATE_CURRENT_VERSION` replaces the version of the app, because an app that is not installed reports the version of Electron, or "0.0" on Linux. `HIVE_UPDATE_LOG=<file>` writes a line for each step of the check.
 
 ### 12.2 Lessons
 
@@ -190,7 +190,7 @@ The workflow `.github/workflows/release.yml` gives each merge to `main` a versio
 - `electron-builder` does not rebuild `node-pty` (`npmRebuild` is `false`), because the package has prebuilt binaries for all systems. A rebuild needs a C++ toolchain, and it fails on a plain Windows machine.
 - The installers are not signed with a trusted certificate. Windows SmartScreen warns about an unknown publisher. On macOS, the hook `scripts/ad-hoc-sign.cjs` gives the app an ad hoc signature, because Apple Silicon reports an unsigned app as damaged. The app is not notarized, so the user must open it once with a right click and "Open".
 - To sign the installers later, add the certificate as repository secrets and set the `CSC_LINK` and `CSC_KEY_PASSWORD` variables in the build step. The hook then does nothing on macOS. Notarization needs more settings.
-- The app does not update itself. An installed app checks the public list of releases of this repository (`https://api.github.com/repos/calielc/ClaudeCode-Hive/releases/latest`) 15 seconds after the start and every 4 hours. The call needs no token. GitHub allows 60 calls an hour for each address, which is far more than this needs. If the latest release has a higher version than `app.getVersion()`, the top bar shows a notice with a link to the page of the release. The check skips drafts and pre-releases, so a release is visible only after the owner publishes the draft.
+- The app does not update itself. An installed app checks the public list of releases of this repository (`https://api.github.com/repos/calielc/ClaudeCode-Hive/releases/latest`) 15 seconds after the start and every 4 hours. The call needs no token. GitHub allows 60 calls an hour for each address, which is far more than this needs. A failed check tries again after one minute, up to three times in a row. If the latest release has a higher version than `app.getVersion()`, the top bar shows a notice with a link to the page of the release. The check skips drafts and pre-releases, so a release is visible only after the owner publishes the draft.
 - A real self-update needs `electron-updater`. On macOS it also needs a Developer ID signature, which the app does not have. See the signing note above.
 
 ## 15. Decisions and why

@@ -42,7 +42,10 @@ describe("the notice of a newer release", () => {
     hive = await launchHive({
       env: {
         HIVE_UPDATE_URL: release.url,
+        HIVE_UPDATE_CURRENT_VERSION: "2.0.0",
         HIVE_UPDATE_DELAY_MS: "100",
+        HIVE_UPDATE_RETRY_MS: "300",
+        HIVE_UPDATE_LOG: join(folder, "update.log"),
         HIVE_OPEN_LOG: join(folder, "opened.log"),
       },
     });
@@ -50,6 +53,12 @@ describe("the notice of a newer release", () => {
   after(async () => {
     await hive.close();
     server.close();
+    // The log of the check helps to find a fault on a runner that I cannot see.
+    try {
+      console.log(readFileSync(join(folder, "update.log"), "utf8"));
+    } catch {
+      console.log("The check wrote no log.");
+    }
     rmSync(folder, { recursive: true, force: true });
   });
 
@@ -79,18 +88,29 @@ describe("the notice of a newer release", () => {
 
 describe("no notice", () => {
   test("when the latest release is not newer than the app", async () => {
-    const release = await releaseServer("v0.0.1");
+    const release = await releaseServer("v2.0.0");
+    const folder = mkdtempSync(join(tmpdir(), "hive-update-"));
+    const logFile = join(folder, "update.log");
     const hive = await launchHive({
-      env: { HIVE_UPDATE_URL: release.url, HIVE_UPDATE_DELAY_MS: "100" },
+      env: {
+        HIVE_UPDATE_URL: release.url,
+        HIVE_UPDATE_CURRENT_VERSION: "2.0.0",
+        HIVE_UPDATE_DELAY_MS: "100",
+        HIVE_UPDATE_LOG: logFile,
+      },
     });
     try {
-      // Give the check time to run. A newer release would have shown by now.
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Wait until the check has run. Then a newer release would have shown, so no notice means that it is not newer.
+      await eventually(() =>
+        assert.match(readFileSync(logFile, "utf8"), /latest release is 2.0.0/),
+      );
+      await new Promise((resolve) => setTimeout(resolve, 300));
       assert.equal(await hive.page.locator(".update-notice").count(), 0);
       assert.equal((await hive.state()).update, null);
     } finally {
       await hive.close();
       release.server.close();
+      rmSync(folder, { recursive: true, force: true });
     }
   });
 

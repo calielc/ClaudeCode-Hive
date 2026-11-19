@@ -90,7 +90,7 @@ Eight colors mark sessions: red, orange, yellow, green, teal, blue, purple and p
 - An installed Hive looks for a newer release on GitHub, 15 seconds after the start and then every 4 hours. It only reads the public list of releases. It sends no data about you.
 - If a newer release exists, a small notice "Update <version>" shows in the top bar, next to the layout buttons. A click opens the page of the release in your browser. You download and install the new version yourself.
 - The cross on the notice hides it for that version. A later release shows it again.
-- Drafts and pre-releases do not count. A check that fails, for example without a network, does nothing and tries again at the next time.
+- Drafts and pre-releases do not count. A check that fails, for example without a network, does nothing. It tries again after one minute, up to three times, and then at the next normal time.
 - The app does not update itself. A restart of Hive ends all terminals, so you choose when to install.
 - A Hive that runs from the source code (`npm run dev`) does not check.
 

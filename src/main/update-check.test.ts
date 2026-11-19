@@ -53,18 +53,22 @@ test("parseRelease takes the tag and the page, and refuses drafts and pre-releas
   assert.equal(parseRelease("text"), undefined);
 });
 
-test("fetchLatest gives nothing on an error status, bad data or no network", async () => {
+test("fetchLatest gives nothing for bad data, and throws when the request fails", async () => {
   assert.equal(
     (await fetchLatest("http://x", answer(release)))?.version,
     "2.1.0",
   );
-  assert.equal(await fetchLatest("http://x", answer({}, 404)), undefined);
   assert.equal(
     await fetchLatest("http://x", answer("not a release")),
     undefined,
   );
+  assert.equal(
+    await fetchLatest("http://x", answer({ ...release, draft: true })),
+    undefined,
+  );
+  await assert.rejects(fetchLatest("http://x", answer({}, 404)), /404/);
   const offline = (() => Promise.reject(new Error("offline"))) as typeof fetch;
-  assert.equal(await fetchLatest("http://x", offline), undefined);
+  await assert.rejects(fetchLatest("http://x", offline), /offline/);
 });
 
 test("the checker tells the caller once for each new version", async () => {
@@ -97,4 +101,70 @@ test("the checker says nothing when the release is not newer", async () => {
   await checker.check();
   assert.deepEqual(found, []);
   assert.equal(checker.available, undefined);
+});
+
+test("a failed check gives false and a line in the log, and a good check gives true", async () => {
+  const lines: string[] = [];
+  const offline = (() => Promise.reject(new Error("offline"))) as typeof fetch;
+  const failing = new UpdateChecker({
+    current: "2.0.0",
+    url: "http://x",
+    onFound: () => undefined,
+    log: (line) => lines.push(line),
+    fetchFn: offline,
+  });
+  assert.equal(await failing.check(), false);
+  assert.match(lines.join(" "), /check failed.*offline/);
+
+  const working = new UpdateChecker({
+    current: "2.0.0",
+    url: "http://x",
+    onFound: () => undefined,
+    fetchFn: answer(release),
+  });
+  assert.equal(await working.check(), true);
+});
+
+test("a check that failed is tried again soon, and the release is found then", async () => {
+  const found: string[] = [];
+  let calls = 0;
+  const checker = new UpdateChecker({
+    current: "2.0.0",
+    url: "http://x",
+    delayMs: 5,
+    retryMs: 20,
+    // A long normal time proves that the second try came from the quick retry.
+    intervalMs: 60_000,
+    onFound: (info) => found.push(info.version),
+    fetchFn: (() => {
+      calls += 1;
+      return calls === 1
+        ? Promise.reject(new Error("offline"))
+        : Promise.resolve(new Response(JSON.stringify(release)));
+    }) as typeof fetch,
+  });
+  checker.start();
+  try {
+    const end = Date.now() + 3000;
+    while (found.length === 0 && Date.now() < end) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    assert.deepEqual(found, ["2.1.0"]);
+    assert.equal(calls, 2);
+  } finally {
+    checker.stop();
+  }
+});
+
+test("a message to the windows that fails does not hide the release", async () => {
+  const checker = new UpdateChecker({
+    current: "2.0.0",
+    url: "http://x",
+    onFound: () => {
+      throw new Error("the window is not ready");
+    },
+    fetchFn: answer(release),
+  });
+  assert.equal(await checker.check(), true);
+  assert.equal(checker.available?.version, "2.1.0");
 });
