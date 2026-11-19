@@ -81,7 +81,7 @@ jobs:
 
       # No certificate is configured. Windows skips the signing. The hook scripts/ad-hoc-sign.cjs signs the Mac app ad hoc.
       - name: Build the installers
-        run: npm run dist -- ${{ matrix.builder-args }} --publish never
+        run: npm run dist:release -- ${{ matrix.builder-args }} --publish never
 
       - name: Show the signature of the Mac app
         if: runner.os == 'macOS'

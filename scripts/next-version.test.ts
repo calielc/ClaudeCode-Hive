@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { isNewer } from "../src/main/update-check.ts";
 import {
   bumpFor,
   bumpVersion,
   type Commit,
+  draftVersion,
   highestTag,
   isConventionalTitle,
   parseSubject,
@@ -101,4 +103,12 @@ test("a title needs a known type and a description", () => {
   assert.equal(isConventionalTitle("feature: hide the panel"), false);
   assert.equal(isConventionalTitle("Hide the panel"), false);
   assert.equal(isConventionalTitle(""), false);
+});
+
+test("a local build gets the next version with a draft mark, which is older than the release", () => {
+  assert.equal(draftVersion("2.1.0", 3), "2.1.0-draft.3");
+  assert.equal(draftVersion("v2.0.0", 0), "2.0.0-draft.0");
+  // The update check treats the draft as older than the release.
+  assert.equal(isNewer("2.1.0", draftVersion("2.1.0", 3)), true);
+  assert.equal(isNewer(draftVersion("2.1.0", 3), "2.0.0"), true);
 });

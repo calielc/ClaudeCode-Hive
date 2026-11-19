@@ -42,7 +42,7 @@ The installers for Windows and macOS are on the Releases page of this repository
 
 ## Requirements
 
-- Node.js 20 or later, to build and run from source.
+- Node.js 22.18 or later, to build and run from source. The scripts in `scripts/` run TypeScript directly.
 - The `claude` command from Claude Code, on the path of your login shell.
 
 ## Develop
@@ -59,7 +59,7 @@ Other commands:
 - `npm test` runs the unit tests.
 - `npm run test:e2e` starts the real app and runs the end-to-end tests.
 - `npm run typecheck` checks the types.
-- `npm run dist` builds an installer for the system you are on.
+- `npm run dist` builds an installer for the system you are on. The version is the next release version with a draft mark, for example `2.1.0-draft.3`, so a local file is never mistaken for a release.
 
 Each merge to `main` can make a new version. The commit type decides: `feat` gives a minor version, `fix` and `perf` give a patch version, and `feat!:` or a `BREAKING CHANGE:` line gives a major version. The other types make no release. The release workflow builds the installers and makes a draft release. You publish the draft by hand. Squash merge the pull requests, and give each one a title in the form `type: description`. `docs/TECH-STACK.md`, section 14, describes it.
 

@@ -30,11 +30,16 @@ describe("the packaged app", {
 
   test("reports its own version, which the update check compares with", async () => {
     const version = await hive.app.evaluate(({ app }) => app.getVersion());
-    const expected = (
-      JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")) as {
-        version: string;
-      }
-    ).version;
+    // A local draft build sets HIVE_EXPECT_VERSION. The release build has the version in package.json.
+    const expected =
+      process.env.HIVE_EXPECT_VERSION ??
+      (
+        JSON.parse(
+          readFileSync(join(process.cwd(), "package.json"), "utf8"),
+        ) as {
+          version: string;
+        }
+      ).version;
     assert.equal(version, expected);
   });
 

@@ -128,3 +128,8 @@ export function highestTag(tags: string[]): string | undefined {
   );
   return versions[0]?.tag;
 }
+
+/** The version of a local build: the next version with a draft mark and the number of commits since the last release. */
+export function draftVersion(version: string, commits: number): string {
+  return `${version.trim().replace(/^v/i, "")}-draft.${commits}`;
+}

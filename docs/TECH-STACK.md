@@ -112,9 +112,9 @@ The scripts run with the real `node` that the login shell finds. Without Node, t
 - A new install of Electron resets this change. The next `npm run dev` sets it again.
 - After the start, the interface reloads hot. If you change a file with the app state, the page reloads and the tabs come back.
 - `npm run dev:watch` also restarts the whole app after a change in the main process. A restart ends all terminals. Do not use it for Hive inside Hive.
-- `npm test` runs 61 unit tests. They cover the placement rules, the tab reorder, the saved session, formatting, the scanner, the search, the paths, the link rules, the agent transcripts, the update check and the version rules of the releases.
+- `npm test` runs 62 unit tests. They cover the placement rules, the tab reorder, the saved session, formatting, the scanner, the search, the paths, the link rules, the agent transcripts, the update check and the version rules of the releases.
 - `npm run test:e2e` builds the app and runs the end-to-end tests. They start the real app, so they need a screen. See section 12.3.
-- `npm run typecheck`, `npm run lint`, `npm run build` and `npm run dist` (an installer for the current system) are also available. `npm run lint:fix` formats the code and applies the safe fixes.
+- `npm run typecheck`, `npm run lint`, `npm run build` and `npm run dist` (an installer for the current system, with a draft version, see section 14.1) are also available. `npm run lint:fix` formats the code and applies the safe fixes.
 - The installers are not signed with a trusted certificate, because none exists. Section 14 has the details. On macOS, open the app with a right click and "Open".
 
 ### 11.1 Strict checks and style
@@ -174,7 +174,7 @@ The workflow `.github/workflows/release.yml` gives each merge to `main` a versio
 
 - The version follows Semantic Versioning. The commit types decide it, as in Conventional Commits. A `feat` commit gives a minor version (2.0.0 to 2.1.0). A `fix` or `perf` commit gives a patch version (2.0.0 to 2.0.1). A `!` before the colon, as in `feat!: ...`, or a line that starts with `BREAKING CHANGE:` in the message, gives a major version (2.0.0 to 3.0.0).
 - The types `docs`, `test`, `chore`, `ci`, `build`, `style` and `refactor` make no release. Renovate uses `chore`, so a dependency update makes no release by itself.
-- The job "Choose the version" runs `scripts/release-version.ts`. It finds the highest tag `vX.Y.Z`, reads all commit messages since that tag and takes the biggest change. If there is none, the other jobs are skipped. The rules are in `scripts/next-version.ts`, and `scripts/next-version.test.ts` tests them.
+- The job "Choose the version" runs `scripts/release-version.ts`, which reads git through `scripts/git-version.ts`. It finds the highest tag `vX.Y.Z`, reads all commit messages since that tag and takes the biggest change. If there is none, the other jobs are skipped. The rules are in `scripts/next-version.ts`, and `scripts/next-version.test.ts` tests them.
 - The tag is the version. The file `package.json` keeps its old number in the repository, and nothing is committed to `main`. Inside the build, `npm version` sets the new number. The installers and the app itself then report the new version, and the update notice (section 9 of `docs/FEATURES.md`) compares against it.
 - The commit message is the title of the pull request when you squash merge. Squash merge the pull requests. The workflow `.github/workflows/pr-title.yml` fails if the title is not `type: description` with a known type. Add that check to the required checks of the ruleset if you want to enforce it.
 
@@ -185,6 +185,8 @@ The workflow `.github/workflows/release.yml` gives each merge to `main` a versio
 - The `release` job collects the files and creates a draft release with the title "Hive <version>". The notes list the commits since the last tag, without the `chore`, `ci`, `docs`, `test`, `build` and `style` commits.
 - The tag does not exist while the release is a draft. GitHub makes the tag `v<version>` on the commit of the build when the owner publishes the draft. The next version then counts from this tag.
 - Merges that come before the owner publishes the draft do not make a second version. Each run counts from the last published tag, so it covers all changes that are not published yet. It replaces the old draft. Only a draft with the marker `hive-auto-release` in its notes is replaced. A draft that the owner made by hand stays.
+- A local `npm run dist` does the same version choice, with `scripts/dist.ts`. It builds with the next version and the mark `-draft.<n>`, where n is the number of commits since the last release, for example `Hive-2.1.0-draft.3-win-x64.exe`. It passes the version to electron-builder with `-c.extraMetadata.version`, so `package.json` does not change. A draft is older than the release with the same numbers, so a draft build still shows the update notice when the real release exists. Other arguments go to electron-builder, for example `npm run dist -- --win --dir`. The workflow uses `npm run dist:release`, which builds with the version that `npm version` set.
+- To run the packaged test against a local draft build, set `HIVE_EXPECT_VERSION` to the draft version that `npm run dist` prints, and `HIVE_E2E_PACKAGED` to the unpacked app.
 - A run by hand (`workflow_dispatch`) builds the installers and keeps them as workflow artifacts for 7 days. It makes no release.
 - A tag that the owner pushes by hand starts nothing. The workflow starts only on a push to `main`.
 - `electron-builder` does not rebuild `node-pty` (`npmRebuild` is `false`), because the package has prebuilt binaries for all systems. A rebuild needs a C++ toolchain, and it fails on a plain Windows machine.
