@@ -1,66 +1,77 @@
-import { FitAddon } from '@xterm/addon-fit'
-import { WebLinksAddon } from '@xterm/addon-web-links'
-import { Terminal } from '@xterm/xterm'
-import '@xterm/xterm/css/xterm.css'
-import type { PtyExit } from '@shared/types'
-import { shortcutFor } from './shortcuts'
-import { toXtermTheme, type TerminalTheme } from './themes'
+import { FitAddon } from "@xterm/addon-fit";
+import { WebLinksAddon } from "@xterm/addon-web-links";
+import { Terminal } from "@xterm/xterm";
+import "@xterm/xterm/css/xterm.css";
+import type { PtyExit } from "@shared/types";
+import { shortcutFor } from "./shortcuts";
+import { type TerminalTheme, toXtermTheme } from "./themes";
 
 /** One terminal per session. It lives as long as the tab, also while no pane shows it. */
 export interface TerminalEntry {
-  id: string
-  folder: string
-  resume: boolean
-  term: Terminal
-  fit: FitAddon
-  element: HTMLDivElement
-  opened: boolean
-  started: boolean
-  ready: boolean
+  id: string;
+  folder: string;
+  resume: boolean;
+  term: Terminal;
+  fit: FitAddon;
+  element: HTMLDivElement;
+  opened: boolean;
+  started: boolean;
+  ready: boolean;
 }
 
-const entries = new Map<string, TerminalEntry>()
-let exitHandler: ((exit: PtyExit) => void) | undefined
-let listening = false
+const entries = new Map<string, TerminalEntry>();
+let exitHandler: ((exit: PtyExit) => void) | undefined;
+let listening = false;
 
-const FONT = 'Menlo, Monaco, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace'
+const FONT =
+  'Menlo, Monaco, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace';
 
 function listenOnce(): void {
   if (listening) {
-    return
+    return;
   }
-  listening = true
+  listening = true;
   window.hive.pty.onData((id, data) => {
     // Data that comes before the first answer of `attach` is already in its buffer.
-    const entry = entries.get(id)
+    const entry = entries.get(id);
     if (entry?.ready) {
-      entry.term.write(data)
+      entry.term.write(data);
     }
-  })
+  });
   window.hive.pty.onExit((exit) => {
     if (window.hive.debug) {
-      console.log('[pty exit]', JSON.stringify(exit))
+      // biome-ignore lint/suspicious/noConsole: A debug trace. It shows only when HIVE_DEBUG is set.
+      console.log("[pty exit]", JSON.stringify(exit));
     }
-    entries.get(exit.id)?.term.write(`\r\n\x1b[2m[process ended with code ${exit.exitCode}]\x1b[0m\r\n`)
-    exitHandler?.(exit)
-  })
+    entries
+      .get(exit.id)
+      ?.term.write(
+        `\r\n\x1b[2m[process ended with code ${exit.exitCode}]\x1b[0m\r\n`,
+      );
+    exitHandler?.(exit);
+  });
 }
 
 export function onProcessExit(handler: (exit: PtyExit) => void): void {
-  exitHandler = handler
-  listenOnce()
+  exitHandler = handler;
+  listenOnce();
 }
 
 export function getEntry(id: string): TerminalEntry | undefined {
-  return entries.get(id)
+  return entries.get(id);
 }
 
-export function createEntry(id: string, folder: string, resume: boolean, theme: TerminalTheme): TerminalEntry {
-  const existing = entries.get(id)
+export function createEntry(
+  id: string,
+  folder: string,
+  resume: boolean,
+  theme: TerminalTheme,
+): TerminalEntry {
+  const existing = entries.get(id);
   if (existing) {
-    return existing
+    return existing;
   }
-  listenOnce()
+  listenOnce();
   const term = new Terminal({
     fontFamily: FONT,
     fontSize: 13,
@@ -69,33 +80,45 @@ export function createEntry(id: string, folder: string, resume: boolean, theme: 
     allowProposedApi: true,
     theme: toXtermTheme(theme),
     // Links that the program marks itself (OSC 8) open in the browser of the system too.
-    linkHandler: { activate: (_event, text) => window.hive.openExternal(text) }
-  })
-  const fit = new FitAddon()
-  term.loadAddon(fit)
+    linkHandler: { activate: (_event, text) => window.hive.openExternal(text) },
+  });
+  const fit = new FitAddon();
+  term.loadAddon(fit);
   // Web addresses in the text, also when they wrap over several lines, open in the browser of the system.
-  term.loadAddon(new WebLinksAddon((_event, url) => window.hive.openExternal(url)))
-  const element = document.createElement('div')
-  element.className = 'terminal-host'
-  const entry: TerminalEntry = { id, folder, resume, term, fit, element, opened: false, started: false, ready: false }
-  entries.set(id, entry)
+  term.loadAddon(
+    new WebLinksAddon((_event, url) => window.hive.openExternal(url)),
+  );
+  const element = document.createElement("div");
+  element.className = "terminal-host";
+  const entry: TerminalEntry = {
+    id,
+    folder,
+    resume,
+    term,
+    fit,
+    element,
+    opened: false,
+    started: false,
+    ready: false,
+  };
+  entries.set(id, entry);
 
   // Keys that Hive handles itself must not reach the terminal.
   term.attachCustomKeyEventHandler((event) => {
-    const handled = clipboardKey(term, event)
-    return handled === undefined ? shortcutFor(event) === undefined : !handled
-  })
+    const handled = clipboardKey(term, event);
+    return handled === undefined ? shortcutFor(event) === undefined : !handled;
+  });
   term.onData((data) => {
     if (entry.started) {
-      window.hive.pty.write(id, data)
+      window.hive.pty.write(id, data);
     }
-  })
+  });
   term.onResize(({ cols, rows }) => {
     if (entry.started) {
-      window.hive.pty.resize(id, cols, rows)
+      window.hive.pty.resize(id, cols, rows);
     }
-  })
-  return entry
+  });
+  return entry;
 }
 
 /**
@@ -104,45 +127,50 @@ export function createEntry(id: string, folder: string, resume: boolean, theme: 
  * Ctrl+V with an image on the clipboard still reaches Claude Code, which pastes images with it.
  * Returns true when Hive handled the key, and undefined when the terminal must see it.
  */
-function clipboardKey(term: Terminal, event: KeyboardEvent): boolean | undefined {
-  if (event.type !== 'keydown' || event.altKey || event.shiftKey) {
-    return undefined
+function clipboardKey(
+  term: Terminal,
+  event: KeyboardEvent,
+): boolean | undefined {
+  if (event.type !== "keydown" || event.altKey || event.shiftKey) {
+    return undefined;
   }
   if (event.metaKey === event.ctrlKey) {
-    return undefined
+    return undefined;
   }
-  const key = event.key.toLowerCase()
-  if (key === 'c' || key === 'x') {
+  const key = event.key.toLowerCase();
+  if (key === "c" || key === "x") {
     if (term.hasSelection()) {
-      void navigator.clipboard.writeText(term.getSelection())
-      event.preventDefault()
-      return true
+      void navigator.clipboard.writeText(term.getSelection());
+      event.preventDefault();
+      return true;
     }
-    return event.metaKey ? true : undefined
+    return event.metaKey ? true : undefined;
   }
-  if (key === 'v') {
-    event.preventDefault()
-    void pasteInto(term)
-    return true
+  if (key === "v") {
+    event.preventDefault();
+    void pasteInto(term);
+    return true;
   }
-  return undefined
+  return undefined;
 }
 
 async function pasteInto(term: Terminal): Promise<void> {
   try {
-    const items = await navigator.clipboard.read()
-    if (items.some((item) => item.types.some((type) => type.startsWith('image/')))) {
+    const items = await navigator.clipboard.read();
+    if (
+      items.some((item) => item.types.some((type) => type.startsWith("image/")))
+    ) {
       // Claude Code pastes an image with Ctrl+V, and with Alt+V on Windows.
-      term.input(window.hive?.platform === 'win32' ? '\x1bv' : '\x16')
-      return
+      term.input(window.hive?.platform === "win32" ? "\x1bv" : "\x16");
+      return;
     }
   } catch {
     // The clipboard has no rich content, or the page may not read it. Paste the text.
   }
   try {
-    const text = await navigator.clipboard.readText()
+    const text = await navigator.clipboard.readText();
     if (text) {
-      term.paste(text)
+      term.paste(text);
     }
   } catch {
     // Nothing to paste.
@@ -151,29 +179,36 @@ async function pasteInto(term: Terminal): Promise<void> {
 
 /** Puts the terminal into a container. The first time, it also starts the process with the real size. */
 export function mountEntry(entry: TerminalEntry, container: HTMLElement): void {
-  container.appendChild(entry.element)
+  container.appendChild(entry.element);
   if (!entry.opened) {
-    entry.term.open(entry.element)
-    entry.opened = true
+    entry.term.open(entry.element);
+    entry.opened = true;
   }
   // A timer, not requestAnimationFrame: a covered or minimized window does not run animation frames,
   // and the session must start anyway.
   setTimeout(() => {
-    fitEntry(entry)
-    void start(entry)
-  }, 0)
+    fitEntry(entry);
+    void start(entry);
+  }, 0);
 }
 
-export function unmountEntry(entry: TerminalEntry, container: HTMLElement): void {
+export function unmountEntry(
+  entry: TerminalEntry,
+  container: HTMLElement,
+): void {
   if (entry.element.parentElement === container) {
-    container.removeChild(entry.element)
+    container.removeChild(entry.element);
   }
 }
 
 export function fitEntry(entry: TerminalEntry): void {
-  if (entry.element.isConnected && entry.element.clientWidth > 0 && entry.element.clientHeight > 0) {
+  if (
+    entry.element.isConnected &&
+    entry.element.clientWidth > 0 &&
+    entry.element.clientHeight > 0
+  ) {
     try {
-      entry.fit.fit()
+      entry.fit.fit();
     } catch {
       // The terminal is not ready to measure yet.
     }
@@ -182,84 +217,99 @@ export function fitEntry(entry: TerminalEntry): void {
 
 async function start(entry: TerminalEntry): Promise<void> {
   if (entry.started) {
-    return
+    return;
   }
-  entry.started = true
-  const size = entry.fit.proposeDimensions()
-  const cols = size?.cols ?? 100
-  const rows = size?.rows ?? 30
-  let result: Awaited<ReturnType<typeof window.hive.pty.attach>>
+  entry.started = true;
+  const size = entry.fit.proposeDimensions();
+  const cols = size?.cols ?? 100;
+  const rows = size?.rows ?? 30;
+  let result: Awaited<ReturnType<typeof window.hive.pty.attach>>;
   try {
-    result = await window.hive.pty.attach(entry.id, { folder: entry.folder, resume: entry.resume, cols, rows })
+    result = await window.hive.pty.attach(entry.id, {
+      folder: entry.folder,
+      resume: entry.resume,
+      cols,
+      rows,
+    });
   } catch (error) {
     // Say why in the terminal, so the user is not left with an empty pane.
-    entry.term.write(`\r\n\x1b[31mCould not start the session: ${error instanceof Error ? error.message : String(error)}\x1b[0m\r\n`)
-    return
+    entry.term.write(
+      `\r\n\x1b[31mCould not start the session: ${error instanceof Error ? error.message : String(error)}\x1b[0m\r\n`,
+    );
+    return;
   }
   if (result.buffer) {
-    entry.term.write(result.buffer)
+    entry.term.write(result.buffer);
   }
-  entry.ready = true
+  entry.ready = true;
   if (!result.created) {
     // A second window shows a process that already runs. Changing the size once makes Claude Code draw the screen again.
-    window.hive.pty.resize(entry.id, Math.max(cols - 1, 2), rows)
-    setTimeout(() => window.hive.pty.resize(entry.id, cols, rows), 60)
+    window.hive.pty.resize(entry.id, Math.max(cols - 1, 2), rows);
+    setTimeout(() => window.hive.pty.resize(entry.id, cols, rows), 60);
   }
 }
 
 export function disposeEntry(id: string): void {
-  const entry = entries.get(id)
+  const entry = entries.get(id);
   if (entry) {
-    entries.delete(id)
-    entry.element.remove()
-    entry.term.dispose()
+    entries.delete(id);
+    entry.element.remove();
+    entry.term.dispose();
   }
 }
 
 export function applyTheme(theme: TerminalTheme): void {
   for (const entry of entries.values()) {
-    entry.term.options.theme = toXtermTheme(theme)
+    entry.term.options.theme = toXtermTheme(theme);
   }
 }
 
 export function focusEntry(id: string): void {
-  const entry = entries.get(id)
+  const entry = entries.get(id);
   if (entry?.element.isConnected) {
-    entry.term.focus()
+    entry.term.focus();
   }
 }
 
 /** The text on the screen and in the scrollback of a terminal. Used by tests. */
 export function terminalText(id: string): string {
-  const entry = entries.get(id)
+  const entry = entries.get(id);
   if (!entry) {
-    return ''
+    return "";
   }
-  const buffer = entry.term.buffer.active
-  const lines: string[] = []
+  const buffer = entry.term.buffer.active;
+  const lines: string[] = [];
   for (let index = 0; index < buffer.length; index += 1) {
-    lines.push(buffer.getLine(index)?.translateToString(true) ?? '')
+    lines.push(buffer.getLine(index)?.translateToString(true) ?? "");
   }
-  return lines.join('\n').trim()
+  return lines.join("\n").trim();
 }
 
 /** Where a text is on the screen of a terminal, in window coordinates. Used by tests to click a link. */
-export function pointOf(id: string, needle: string, offset = 0): { x: number; y: number } | null {
-  const entry = entries.get(id)
-  const screen = entry?.term.element?.querySelector('.xterm-screen')
+export function pointOf(
+  id: string,
+  needle: string,
+  offset = 0,
+): { x: number; y: number } | null {
+  const entry = entries.get(id);
+  const screen = entry?.term.element?.querySelector(".xterm-screen");
   if (!entry || !screen) {
-    return null
+    return null;
   }
-  const buffer = entry.term.buffer.active
+  const buffer = entry.term.buffer.active;
   for (let row = 0; row < entry.term.rows; row += 1) {
-    const line = buffer.getLine(buffer.viewportY + row)?.translateToString(true) ?? ''
-    const column = line.indexOf(needle)
+    const line =
+      buffer.getLine(buffer.viewportY + row)?.translateToString(true) ?? "";
+    const column = line.indexOf(needle);
     if (column >= 0) {
-      const rect = screen.getBoundingClientRect()
-      const cellWidth = rect.width / entry.term.cols
-      const cellHeight = rect.height / entry.term.rows
-      return { x: rect.left + (column + offset + 0.5) * cellWidth, y: rect.top + (row + 0.5) * cellHeight }
+      const rect = screen.getBoundingClientRect();
+      const cellWidth = rect.width / entry.term.cols;
+      const cellHeight = rect.height / entry.term.rows;
+      return {
+        x: rect.left + (column + offset + 0.5) * cellWidth,
+        y: rect.top + (row + 0.5) * cellHeight,
+      };
     }
   }
-  return null
+  return null;
 }

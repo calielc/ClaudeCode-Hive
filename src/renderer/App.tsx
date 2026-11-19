@@ -1,84 +1,110 @@
-import { useEffect, useRef } from 'react'
-import { cycleTabs, focusSelected, newSession, setTheme, startMainWindow } from './actions'
-import { drawBadge } from './badge'
-import { ContextMenu } from './components/ContextMenu'
-import { PaneLayout, TopBar } from './components/Panes'
-import { Sidebar } from './components/Sidebar'
-import { UndockedView } from './components/UndockedView'
-import { shortcutFor } from './shortcuts'
-import { themeNamed, THEMES } from './themes'
-import { useStore } from './state'
+import { useEffect, useRef } from "react";
+import {
+  cycleTabs,
+  focusSelected,
+  newSession,
+  setTheme,
+  startMainWindow,
+} from "./actions";
+import { drawBadge } from "./badge";
+import { ContextMenu } from "./components/ContextMenu";
+import { PaneLayout, TopBar } from "./components/Panes";
+import { Sidebar } from "./components/Sidebar";
+import { UndockedView } from "./components/UndockedView";
+import { shortcutFor } from "./shortcuts";
+import { useStore } from "./state";
+import { THEMES, themeNamed } from "./themes";
 
 export function App() {
-  const hash = window.location.hash.slice(1)
-  if (hash.startsWith('/terminal/')) {
-    const [path, query] = hash.split('?')
-    const id = path.slice('/terminal/'.length)
-    return <UndockedView id={id} title={new URLSearchParams(query).get('title') ?? 'Hive'} />
+  const hash = window.location.hash.slice(1);
+  if (hash.startsWith("/terminal/")) {
+    const [path, query] = hash.split("?");
+    const id = (path ?? "").slice("/terminal/".length);
+    return (
+      <UndockedView
+        id={id}
+        title={new URLSearchParams(query).get("title") ?? "Hive"}
+      />
+    );
   }
-  return <MainView />
+  return <MainView />;
 }
 
 function MainView() {
-  const themeName = useStore((state) => state.themeName)
-  const selectedTabId = useStore((state) => state.selectedTabId)
-  const layout = useStore((state) => state.layout)
-  const waiting = useStore((state) => state.openSessions.filter((session) => session.state === 'waiting').length)
-  const hasTabs =useStore((state) => state.tabs.length > 0)
-  const started = useRef(false)
+  const themeName = useStore((state) => state.themeName);
+  const selectedTabId = useStore((state) => state.selectedTabId);
+  const layout = useStore((state) => state.layout);
+  const waiting = useStore(
+    (state) =>
+      state.openSessions.filter((session) => session.state === "waiting")
+        .length,
+  );
+  const hasTabs = useStore((state) => state.tabs.length > 0);
+  const started = useRef(false);
 
   useEffect(() => {
     if (started.current) {
-      return undefined
+      return undefined;
     }
-    started.current = true
-    void startMainWindow()
+    started.current = true;
+    void startMainWindow();
     const onKey = (event: KeyboardEvent): void => {
-      const action = shortcutFor(event)
+      const action = shortcutFor(event);
       if (!action) {
-        return
+        return;
       }
-      event.preventDefault()
-      event.stopPropagation()
-      if (action.type === 'cycle') {
-        cycleTabs(action.backwards)
-      } else if (action.type === 'newSession') {
-        newSession()
-      } else if (action.type === 'search') {
-        window.dispatchEvent(new Event('hive:focus-search'))
+      event.preventDefault();
+      event.stopPropagation();
+      if (action.type === "cycle") {
+        cycleTabs(action.backwards);
+      } else if (action.type === "newSession") {
+        newSession();
+      } else if (action.type === "search") {
+        window.dispatchEvent(new Event("hive:focus-search"));
       }
-    }
-    window.addEventListener('keydown', onKey, true)
-    window.hive.windows.onCycleTabs((backwards) => cycleTabs(backwards))
-    window.hive.onSetTheme((name) => setTheme(name))
+    };
+    window.addEventListener("keydown", onKey, true);
+    window.hive.windows.onCycleTabs((backwards) => cycleTabs(backwards));
+    window.hive.onSetTheme((name) => setTheme(name));
     // Typing must work right away after Alt-Tab back to Hive. A search field in use keeps the focus.
     const onWindowFocus = (): void => {
-      if (document.activeElement?.tagName !== 'INPUT') {
-        focusSelected()
+      if (document.activeElement?.tagName !== "INPUT") {
+        focusSelected();
       }
-    }
-    window.addEventListener('focus', onWindowFocus)
-    return undefined
-  }, [])
+    };
+    window.addEventListener("focus", onWindowFocus);
+    return undefined;
+  }, []);
 
   // The taskbar badge and the tray tooltip show how many open sessions wait for the user.
   useEffect(() => {
-    window.hive.setWaitingCount(waiting, waiting > 0 ? drawBadge(waiting) : '')
-  }, [waiting])
+    window.hive.setWaitingCount(waiting, waiting > 0 ? drawBadge(waiting) : "");
+  }, [waiting]);
 
   // The Theme menu of the window lists the themes and marks the current one.
   useEffect(() => {
-    window.hive.setThemeMenu(THEMES.map((theme) => theme.name), themeName)
-  }, [themeName])
+    window.hive.setThemeMenu(
+      THEMES.map((theme) => theme.name),
+      themeName,
+    );
+  }, [themeName]);
 
   // The terminal of the selected pane gets the keyboard whenever the selection or the layout changes.
   useEffect(() => {
-    const timers = [0, 80, 300].map((delay) => setTimeout(focusSelected, delay))
-    return () => timers.forEach(clearTimeout)
-  }, [selectedTabId, layout])
+    const timers = [0, 80, 300].map((delay) =>
+      setTimeout(focusSelected, delay),
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [selectedTabId, layout]);
 
   return (
-    <div className="app" data-theme={themeName} style={{ '--pane-bg': themeNamed(themeName).background } as React.CSSProperties}>
+    <div
+      className="app"
+      data-theme={themeName}
+      style={
+        { "--pane-bg": themeNamed(themeName).background } as React.CSSProperties
+      }
+    >
       <Sidebar />
       <main className="main">
         <TopBar />
@@ -93,5 +119,5 @@ function MainView() {
       </main>
       <ContextMenu />
     </div>
-  )
+  );
 }

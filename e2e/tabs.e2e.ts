@@ -1,142 +1,183 @@
-import assert from 'node:assert/strict'
-import { after, before, describe, test } from 'node:test'
-import { card, eventually, launchHive, row, tab, type Hive } from './app'
-import { IDS } from './fixture'
+import assert from "node:assert/strict";
+import { after, before, describe, test } from "node:test";
+import { card, eventually, type Hive, launchHive, row, tab } from "./app";
+import { IDS } from "./fixture";
 
-const modifier = process.platform === 'darwin' ? 'Meta' : 'Control'
+const modifier = process.platform === "darwin" ? "Meta" : "Control";
 
-describe('sessions, tabs and panes', () => {
-  let hive: Hive
+describe("sessions, tabs and panes", () => {
+  let hive: Hive;
 
   before(async () => {
-    hive = await launchHive()
-  })
+    hive = await launchHive();
+  });
   after(async () => {
-    await hive.close()
-  })
+    await hive.close();
+  });
 
-  test('opens a session from the list in a tab, a card and a terminal', async () => {
-    const { page } = hive
-    await row(page, 'Fix login flow').click()
+  test("opens a session from the list in a tab, a card and a terminal", async () => {
+    const { page } = hive;
+    await row(page, "Fix login flow").click();
 
-    await tab(page, 'Fix login flow').waitFor()
-    await card(page, 'Fix login flow').waitFor()
+    await tab(page, "Fix login flow").waitFor();
+    await card(page, "Fix login flow").waitFor();
     // An open session leaves the list. It shows as a card only.
-    await eventually(async () => assert.equal(await row(page, 'Fix login flow').count(), 0))
+    await eventually(async () =>
+      assert.equal(await row(page, "Fix login flow").count(), 0),
+    );
 
-    const state = await hive.state()
-    assert.equal(state.selectedTabId, IDS.login)
+    const state = await hive.state();
+    assert.equal(state.selectedTabId, IDS.login);
     // The state keeps four slots for the largest layout. The empty ones are null.
-    assert.deepEqual(state.slots.slice(0, 1), [IDS.login])
-    await eventually(async () => assert.match(await hive.terminalText(IDS.login), /HIVE-E2E-READY/))
-  })
+    assert.deepEqual(state.slots.slice(0, 1), [IDS.login]);
+    await eventually(async () =>
+      assert.match(await hive.terminalText(IDS.login), /HIVE-E2E-READY/),
+    );
+  });
 
-  test('shows the repository, the branch and the model on the card', async () => {
-    const chips = card(hive.page, 'Fix login flow').locator('.chip')
+  test("shows the repository, the branch and the model on the card", async () => {
+    const chips = card(hive.page, "Fix login flow").locator(".chip");
     await eventually(async () => {
-      const texts = (await chips.allTextContents()).join(' | ')
-      assert.ok(texts.includes(hive.fixture.repoName), texts)
-      assert.ok(texts.includes('feature/qr-login'), texts)
-      assert.ok(texts.includes('Sonnet 5.5'), texts)
-    })
-  })
+      const texts = (await chips.allTextContents()).join(" | ");
+      assert.ok(texts.includes(hive.fixture.repoName), texts);
+      assert.ok(texts.includes("feature/qr-login"), texts);
+      assert.ok(texts.includes("Sonnet 5.5"), texts);
+    });
+  });
 
-  test('marks a working session with a state border on its card and a dot on its tab', async () => {
-    const { page } = hive
+  test("marks a working session with a state border on its card and a dot on its tab", async () => {
+    const { page } = hive;
     await eventually(async () => {
-      assert.equal(await page.locator('.card.state-working').count(), 1)
-      assert.equal(await tab(page, 'Fix login flow').locator('.dot.working').count(), 1)
-    })
-  })
+      assert.equal(await page.locator(".card.state-working").count(), 1);
+      assert.equal(
+        await tab(page, "Fix login flow").locator(".dot.working").count(),
+        1,
+      );
+    });
+  });
 
-  test('sends what you type to the terminal', async () => {
-    const { page } = hive
-    await page.locator('.pane .terminal-container').click()
-    await page.keyboard.type('hello-from-e2e')
-    await page.keyboard.press('Enter')
-    await eventually(async () => assert.match(await hive.terminalText(IDS.login), /echo:.*hello-from-e2e/))
-  })
+  test("sends what you type to the terminal", async () => {
+    const { page } = hive;
+    await page.locator(".pane .terminal-container").click();
+    await page.keyboard.type("hello-from-e2e");
+    await page.keyboard.press("Enter");
+    await eventually(async () =>
+      assert.match(await hive.terminalText(IDS.login), /echo:.*hello-from-e2e/),
+    );
+  });
 
-  test('opens a second session and keeps the first one in the tab bar', async () => {
-    const { page } = hive
-    await row(page, 'Write release notes').click()
-    await tab(page, 'Write release notes').waitFor()
-    await tab(page, 'Fix login flow').waitFor()
-    const state = await hive.state()
-    assert.equal(state.selectedTabId, IDS.plain)
+  test("opens a second session and keeps the first one in the tab bar", async () => {
+    const { page } = hive;
+    await row(page, "Write release notes").click();
+    await tab(page, "Write release notes").waitFor();
+    await tab(page, "Fix login flow").waitFor();
+    const state = await hive.state();
+    assert.equal(state.selectedTabId, IDS.plain);
     // In a single layout, the new session replaces the one in the pane. The first session stays open.
-    assert.deepEqual(state.slots.slice(0, 1), [IDS.plain])
-    assert.equal(state.tabs.length, 2)
-  })
+    assert.deepEqual(state.slots.slice(0, 1), [IDS.plain]);
+    assert.equal(state.tabs.length, 2);
+  });
 
-  test('selects the other tab with Ctrl+Tab and Ctrl+Shift+Tab', async () => {
-    const { page } = hive
-    await page.keyboard.press('Control+Tab')
-    await eventually(async () => assert.equal((await hive.state()).selectedTabId, IDS.login))
-    await page.keyboard.press('Control+Shift+Tab')
-    await eventually(async () => assert.equal((await hive.state()).selectedTabId, IDS.plain))
-  })
+  test("selects the other tab with Ctrl+Tab and Ctrl+Shift+Tab", async () => {
+    const { page } = hive;
+    await page.keyboard.press("Control+Tab");
+    await eventually(async () =>
+      assert.equal((await hive.state()).selectedTabId, IDS.login),
+    );
+    await page.keyboard.press("Control+Shift+Tab");
+    await eventually(async () =>
+      assert.equal((await hive.state()).selectedTabId, IDS.plain),
+    );
+  });
 
-  test('selects a tab with a click on its card', async () => {
-    await card(hive.page, 'Fix login flow').click()
-    await eventually(async () => assert.equal((await hive.state()).selectedTabId, IDS.login))
-  })
+  test("selects a tab with a click on its card", async () => {
+    await card(hive.page, "Fix login flow").click();
+    await eventually(async () =>
+      assert.equal((await hive.state()).selectedTabId, IDS.login),
+    );
+  });
 
-  test('puts both sessions side by side', async () => {
-    const { page } = hive
-    await page.locator('.layouts button[title="Side by side"]').click()
-    await eventually(async () => assert.equal(await page.locator('.pane').count(), 2))
-    const state = await hive.state()
-    assert.equal(state.layout, 'sideBySide')
+  test("puts both sessions side by side", async () => {
+    const { page } = hive;
+    await page.locator('.layouts button[title="Side by side"]').click();
+    await eventually(async () =>
+      assert.equal(await page.locator(".pane").count(), 2),
+    );
+    const state = await hive.state();
+    assert.equal(state.layout, "sideBySide");
     // The selected session stays first. The other session fills the second pane.
-    assert.deepEqual(state.slots.slice(0, 2), [IDS.login, IDS.plain])
-    assert.equal(await page.locator('.pane-badge').count(), 2)
-    assert.equal(await page.locator('.pane.active').count(), 1)
-  })
+    assert.deepEqual(state.slots.slice(0, 2), [IDS.login, IDS.plain]);
+    assert.equal(await page.locator(".pane-badge").count(), 2);
+    assert.equal(await page.locator(".pane.active").count(), 1);
+  });
 
-  test('selects a pane with a click and sends the next pick there', async () => {
-    const { page } = hive
-    await page.locator('.pane').nth(1).locator('.pane-body').click()
-    await eventually(async () => assert.equal(await page.locator('.pane.active').count(), 1))
-    await page.locator('.layouts button[title="Single pane"]').click()
-    await eventually(async () => assert.equal(await page.locator('.pane').count(), 1))
-    assert.equal((await hive.state()).layout, 'single')
-  })
+  test("selects a pane with a click and sends the next pick there", async () => {
+    const { page } = hive;
+    await page.locator(".pane").nth(1).locator(".pane-body").click();
+    await eventually(async () =>
+      assert.equal(await page.locator(".pane.active").count(), 1),
+    );
+    await page.locator('.layouts button[title="Single pane"]').click();
+    await eventually(async () =>
+      assert.equal(await page.locator(".pane").count(), 1),
+    );
+    assert.equal((await hive.state()).layout, "single");
+  });
 
-  test('starts a new session with the button and with the keyboard', async () => {
-    const { page } = hive
-    await page.locator('.new-session').click()
-    await eventually(async () => assert.equal(await tab(page, 'New Session').count(), 1))
-    await page.keyboard.press(`${modifier}+N`)
-    await eventually(async () => assert.equal(await tab(page, 'New Session').count(), 2))
-    await eventually(async () => assert.match(await hive.terminalText((await hive.state()).selectedTabId ?? ''), /HIVE-E2E-READY/))
-  })
+  test("starts a new session with the button and with the keyboard", async () => {
+    const { page } = hive;
+    await page.locator(".new-session").click();
+    await eventually(async () =>
+      assert.equal(await tab(page, "New Session").count(), 1),
+    );
+    await page.keyboard.press(`${modifier}+N`);
+    await eventually(async () =>
+      assert.equal(await tab(page, "New Session").count(), 2),
+    );
+    await eventually(async () =>
+      assert.match(
+        await hive.terminalText((await hive.state()).selectedTabId ?? ""),
+        /HIVE-E2E-READY/,
+      ),
+    );
+  });
 
-  test('closes a tab and puts its session back in the list', async () => {
-    const { page } = hive
-    await tab(page, 'Write release notes').locator('.tab-close[title="Close session"]').click()
-    await eventually(async () => assert.equal(await tab(page, 'Write release notes').count(), 0))
-    await row(page, 'Write release notes').waitFor()
-    assert.equal(await card(page, 'Write release notes').count(), 0)
-  })
+  test("closes a tab and puts its session back in the list", async () => {
+    const { page } = hive;
+    await tab(page, "Write release notes")
+      .locator('.tab-close[title="Close session"]')
+      .click();
+    await eventually(async () =>
+      assert.equal(await tab(page, "Write release notes").count(), 0),
+    );
+    await row(page, "Write release notes").waitFor();
+    assert.equal(await card(page, "Write release notes").count(), 0);
+  });
 
-  test('moves a session to its own window and back', async () => {
-    const { page, app } = hive
-    await tab(page, 'Fix login flow').locator('.tab-close[title="Undock into its own window"]').click()
+  test("moves a session to its own window and back", async () => {
+    const { page, app } = hive;
+    await tab(page, "Fix login flow")
+      .locator('.tab-close[title="Undock into its own window"]')
+      .click();
     await eventually(async () => {
-      assert.equal(app.windows().length, 2)
-      assert.deepEqual((await hive.state()).detached, [IDS.login])
-    })
-    await card(page, 'Fix login flow').locator('.window-mark').waitFor()
+      assert.equal(app.windows().length, 2);
+      assert.deepEqual((await hive.state()).detached, [IDS.login]);
+    });
+    await card(page, "Fix login flow").locator(".window-mark").waitFor();
     // The undock button is gone from a tab in its own window.
-    assert.equal(await tab(page, 'Fix login flow').locator('.tab-close[title="Undock into its own window"]').count(), 0)
+    assert.equal(
+      await tab(page, "Fix login flow")
+        .locator('.tab-close[title="Undock into its own window"]')
+        .count(),
+      0,
+    );
 
-    const other = app.windows().find((window) => window !== page)
-    assert.ok(other)
-    await other.close()
+    const other = app.windows().find((window) => window !== page);
+    assert.ok(other);
+    await other.close();
     await eventually(async () => {
-      assert.equal(app.windows().length, 1)
-      assert.deepEqual((await hive.state()).detached, [])
-    })
-  })
-})
+      assert.equal(app.windows().length, 1);
+      assert.deepEqual((await hive.state()).detached, []);
+    });
+  });
+});

@@ -10,6 +10,8 @@
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
     "dist": "electron-vite build && electron-builder",
     "test": "tsx --test src/main/*.test.ts src/renderer/*.test.ts",
     "test:e2e": "npm run build && tsx --test --test-concurrency=1 e2e/*.e2e.ts",
@@ -19,6 +21,7 @@
     "predev:watch": "node scripts/brand-electron.cjs"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.6.8",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

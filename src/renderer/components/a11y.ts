@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from 'react'
+import type { KeyboardEvent } from "react";
 
 /**
  * Props that make a clickable element work with the keyboard: it takes focus, and Enter or Space does what a click does.
@@ -6,13 +6,16 @@ import type { KeyboardEvent } from 'react'
  */
 export function pressable(activate: () => void) {
   return {
-    role: 'button' as const,
+    role: "button" as const,
     tabIndex: 0,
     onKeyDown: (event: KeyboardEvent) => {
-      if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
-        event.preventDefault()
-        activate()
+      if (
+        event.target === event.currentTarget &&
+        (event.key === "Enter" || event.key === " ")
+      ) {
+        event.preventDefault();
+        activate();
       }
-    }
-  }
+    },
+  };
 }

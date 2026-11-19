@@ -10,7 +10,9 @@
   --waiting: #eb4d4d;
   --ready: #4dbf66;
   --pane-bg: #1a1b26;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    sans-serif;
   font-size: 13px;
   color: var(--text);
 }
@@ -969,7 +971,9 @@ button {
 }
 
 .swatch.chosen {
-  box-shadow: 0 0 0 2px var(--bg-raised), 0 0 0 4px #fff;
+  box-shadow:
+    0 0 0 2px var(--bg-raised),
+    0 0 0 4px #fff;
 }
 
 .menu-item {
@@ -1002,9 +1006,13 @@ button {
 }
 
 .card.drop-before {
-  box-shadow: 0 -4px 0 var(--accent), 0 2px 6px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 -4px 0 var(--accent),
+    0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 .card.drop-after {
-  box-shadow: 0 4px 0 var(--accent), 0 2px 6px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 4px 0 var(--accent),
+    0 2px 6px rgba(0, 0, 0, 0.3);
 }

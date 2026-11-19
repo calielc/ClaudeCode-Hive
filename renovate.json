@@ -43,13 +43,23 @@
     },
     {
       "description": "Each major update of the packages that can break the app gets its own pull request and a label",
-      "matchPackageNames": ["electron", "node-pty", "electron-builder", "@xterm/**"],
+      "matchPackageNames": [
+        "electron",
+        "node-pty",
+        "electron-builder",
+        "@xterm/**"
+      ],
       "matchUpdateTypes": ["major"],
       "labels": ["dependencies", "needs-manual-test"]
     },
     {
       "description": "Electron, the terminal and the packager never merge on their own, because a test in the real app is needed. This rule comes last, so it wins over the rules above.",
-      "matchPackageNames": ["electron", "node-pty", "electron-builder", "@xterm/**"],
+      "matchPackageNames": [
+        "electron",
+        "node-pty",
+        "electron-builder",
+        "@xterm/**"
+      ],
       "automerge": false
     }
   ]

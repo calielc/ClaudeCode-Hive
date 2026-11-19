@@ -10,7 +10,7 @@ This file is the guide for any agent or person who starts new work on Hive. It g
 - Do not edit files in the folder of the running dev app. A change to a React or CSS file reloads the interface only. A change to a file that holds the app state reloads the page, and the tabs come back. A change under `src/main` restarts the app in `npm run dev:watch` only.
 - Commit and push only after the owner asks. Commit messages use the form `type: description`. The repository author is the personal address in the local git identity.
 - Documentation and comments use plain English: short sentences, no contractions, no semicolons, no em-dashes, and the condition first. Do not use the modal verbs that the linter bans. Use `can`, `will` and `must`.
-- Write tests for new rules. Run `npm test` and `npm run typecheck` before you finish. If you change the interface, also run `npm run test:e2e`, and add a test there for a new behavior. The e2e tests use their own data folder and do not disturb a running Hive.
+- Write tests for new rules. Run `npm test`, `npm run typecheck` and `npm run lint` before you finish. `npm run lint:fix` formats the code and applies the safe fixes. If you change the interface, also run `npm run test:e2e`, and add a test there for a new behavior. The e2e tests use their own data folder and do not disturb a running Hive.
 - Tests use fake terminal commands, not the real `claude` command. `docs/TECH-STACK.md` explains how, in section 12.
 
 ## 2. The specs

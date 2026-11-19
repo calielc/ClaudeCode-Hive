@@ -1,322 +1,389 @@
-import type { OpenTabRef, SessionInfo } from '@shared/types'
+import type { OpenTabRef, SessionInfo } from "@shared/types";
 import {
   activate as activatePane,
   addTab,
   cycle,
   detach as detachPane,
+  dockBack,
+  type LayoutMode,
   moveTab,
   moveTabToEnd,
-  dockBack,
+  type PaneState,
   removeTab,
   selectPane as selectPaneState,
   setLayout as setLayoutState,
   show,
-  type LayoutMode,
-  type PaneState
-} from './panes'
-import { getState, setState, type Tab } from './state'
-import { applyTheme, createEntry, disposeEntry, focusEntry, getEntry, onProcessExit } from './terminals'
-import { themeNamed } from './themes'
+} from "./panes";
+import { getState, setState, type Tab } from "./state";
+import {
+  applyTheme,
+  createEntry,
+  disposeEntry,
+  focusEntry,
+  getEntry,
+  onProcessExit,
+} from "./terminals";
+import { themeNamed } from "./themes";
 
-const hive = (): typeof window.hive => window.hive
+const hive = (): typeof window.hive => window.hive;
 
-const paneKeys = ['tabIds', 'detached', 'slots', 'activePane', 'selectedTabId', 'layout'] as const
+const paneKeys = [
+  "tabIds",
+  "detached",
+  "slots",
+  "activePane",
+  "selectedTabId",
+  "layout",
+] as const;
 
 function paneState(): PaneState {
-  const { tabIds, detached, slots, activePane, selectedTabId, layout } = getState()
-  return { tabIds, detached, slots, activePane, selectedTabId, layout }
+  const { tabIds, detached, slots, activePane, selectedTabId, layout } =
+    getState();
+  return { tabIds, detached, slots, activePane, selectedTabId, layout };
 }
 
 function applyPanes(next: PaneState): void {
-  setState(Object.fromEntries(paneKeys.map((key) => [key, next[key]])))
+  setState(Object.fromEntries(paneKeys.map((key) => [key, next[key]])));
 }
 
 // MARK: Tabs
 
 /** After a reload of the page: makes a terminal for every restored tab. It attaches to the process that still runs. */
 export function restoreTerminals(): void {
-  const theme = themeNamed(getState().themeName)
+  const theme = themeNamed(getState().themeName);
   for (const tab of getState().tabs) {
-    createEntry(tab.id, tab.folder, tab.resume, theme)
+    createEntry(tab.id, tab.folder, tab.resume, theme);
   }
 }
 
 export function newSession(): void {
-  const { selectedFolder } = getState()
-  openTab({ id: crypto.randomUUID(), folder: selectedFolder, title: 'New Session', resume: false })
+  const { selectedFolder } = getState();
+  openTab({
+    id: crypto.randomUUID(),
+    folder: selectedFolder,
+    title: "New Session",
+    resume: false,
+  });
 }
 
 export function openSession(session: SessionInfo): void {
-  const tab = getState().tabs.find((item) => item.id === session.id)
+  const tab = getState().tabs.find((item) => item.id === session.id);
   if (tab) {
-    activateTab(tab.id)
-    return
+    activateTab(tab.id);
+    return;
   }
-  openTab({ id: session.id, folder: getState().selectedFolder, title: session.title, resume: true })
+  openTab({
+    id: session.id,
+    folder: getState().selectedFolder,
+    title: session.title,
+    resume: true,
+  });
 }
 
 function openTab(tab: Tab): void {
-  createEntry(tab.id, tab.folder, tab.resume, themeNamed(getState().themeName))
-  setState((current) => ({ tabs: [...current.tabs, tab] }))
-  applyPanes(addTab(paneState(), tab.id))
-  syncOpenTabs()
-  void refresh()
+  createEntry(tab.id, tab.folder, tab.resume, themeNamed(getState().themeName));
+  setState((current) => ({ tabs: [...current.tabs, tab] }));
+  applyPanes(addTab(paneState(), tab.id));
+  syncOpenTabs();
+  void refresh();
 }
 
 export function activateTab(id: string): void {
-  applyPanes(activatePane(paneState(), id))
+  applyPanes(activatePane(paneState(), id));
   if (getState().detached.includes(id)) {
-    hive().windows.undock(id, getState().tabs.find((tab) => tab.id === id)?.title ?? 'Hive')
+    hive().windows.undock(
+      id,
+      getState().tabs.find((tab) => tab.id === id)?.title ?? "Hive",
+    );
   }
 }
 
 export function closeTab(id: string): void {
   if (getState().detached.includes(id)) {
-    hive().windows.dock(id)
+    hive().windows.dock(id);
   }
-  hive().pty.kill(id)
-  disposeEntry(id)
-  setState((current) => ({ tabs: current.tabs.filter((tab) => tab.id !== id) }))
-  applyPanes(removeTab(paneState(), id))
-  syncOpenTabs()
-  void refresh()
+  hive().pty.kill(id);
+  disposeEntry(id);
+  setState((current) => ({
+    tabs: current.tabs.filter((tab) => tab.id !== id),
+  }));
+  applyPanes(removeTab(paneState(), id));
+  syncOpenTabs();
+  void refresh();
 }
 
 /** Puts a tab before or after another tab, or at the end when `targetId` is null. The cards on the left follow the same order. */
-export function reorderTab(id: string, targetId: string | null, after: boolean): void {
-  setState({ tabDrop: null })
-  const next = targetId === null ? moveTabToEnd(paneState(), id) : moveTab(paneState(), id, targetId, after)
-  applyPanes(next)
+export function reorderTab(
+  id: string,
+  targetId: string | null,
+  after: boolean,
+): void {
+  setState({ tabDrop: null });
+  const next =
+    targetId === null
+      ? moveTabToEnd(paneState(), id)
+      : moveTab(paneState(), id, targetId, after);
+  applyPanes(next);
   setState((current) => {
-    const position = (tabId: string): number => next.tabIds.indexOf(tabId)
+    const position = (tabId: string): number => next.tabIds.indexOf(tabId);
     return {
-      tabs: [...current.tabs].sort((left, right) => position(left.id) - position(right.id)),
-      openSessions: [...current.openSessions].sort((left, right) => position(left.id) - position(right.id))
-    }
-  })
-  syncOpenTabs()
+      tabs: [...current.tabs].sort(
+        (left, right) => position(left.id) - position(right.id),
+      ),
+      openSessions: [...current.openSessions].sort(
+        (left, right) => position(left.id) - position(right.id),
+      ),
+    };
+  });
+  syncOpenTabs();
 }
 
 export function selectPane(index: number): void {
-  applyPanes(selectPaneState(paneState(), index))
+  applyPanes(selectPaneState(paneState(), index));
 }
 
 export function setLayout(layout: LayoutMode): void {
-  applyPanes(setLayoutState(paneState(), layout))
+  applyPanes(setLayoutState(paneState(), layout));
 }
 
 export function cycleTabs(backwards: boolean): void {
-  const target = cycle(paneState(), backwards)
+  const target = cycle(paneState(), backwards);
   if (target) {
-    activateTab(target)
+    activateTab(target);
   }
 }
 
 /** A session or tab dropped on a pane. Dropping a visible tab on another pane swaps the two. */
 export function dropOnPane(id: string, pane: number): void {
-  setState({ dropTarget: null })
-  const state = getState()
+  setState({ dropTarget: null });
+  const state = getState();
   if (state.tabs.some((tab) => tab.id === id)) {
     if (state.detached.includes(id)) {
-      applyPanes({ ...paneState(), activePane: pane })
-      hive().windows.dock(id)
+      applyPanes({ ...paneState(), activePane: pane });
+      hive().windows.dock(id);
     } else {
-      applyPanes(show(paneState(), id, pane))
+      applyPanes(show(paneState(), id, pane));
     }
-    return
+    return;
   }
-  const session = state.sessions.find((item) => item.id === id)
+  const session = state.sessions.find((item) => item.id === id);
   if (session) {
-    applyPanes({ ...paneState(), activePane: pane })
-    openSession(session)
+    applyPanes({ ...paneState(), activePane: pane });
+    openSession(session);
   }
 }
 
 export function undock(id: string): void {
-  const tab = getState().tabs.find((item) => item.id === id)
+  const tab = getState().tabs.find((item) => item.id === id);
   if (!tab || getState().detached.includes(id)) {
-    return
+    return;
   }
-  applyPanes(detachPane(paneState(), id))
-  hive().windows.undock(id, tab.title)
+  applyPanes(detachPane(paneState(), id));
+  hive().windows.undock(id, tab.title);
 }
 
 export function dock(id: string): void {
-  hive().windows.dock(id)
+  hive().windows.dock(id);
 }
 
 export function selectedTab(): Tab | undefined {
-  const { tabs, selectedTabId } = getState()
-  return tabs.find((tab) => tab.id === selectedTabId)
+  const { tabs, selectedTabId } = getState();
+  return tabs.find((tab) => tab.id === selectedTabId);
 }
 
 // MARK: Settings
 
 export function setTheme(name: string): void {
-  setState({ themeName: name })
-  applyTheme(themeNamed(name))
+  setState({ themeName: name });
+  applyTheme(themeNamed(name));
 }
 
 export function setTag(ids: string[], tag: string | null): void {
   setState((current) => {
-    const tags = { ...current.tags }
+    const tags = { ...current.tags };
     for (const id of ids) {
       if (tag) {
-        tags[id] = tag
+        tags[id] = tag;
       } else {
-        delete tags[id]
+        delete tags[id];
       }
     }
-    return { tags }
-  })
+    return { tags };
+  });
 }
 
 export async function addFolder(): Promise<void> {
-  const folder = await hive().pickFolder()
+  const folder = await hive().pickFolder();
   if (folder) {
     setState((current) => ({
-      folders: current.folders.includes(folder) ? current.folders : [...current.folders, folder],
-      selectedFolder: folder
-    }))
-    void refresh()
+      folders: current.folders.includes(folder)
+        ? current.folders
+        : [...current.folders, folder],
+      selectedFolder: folder,
+    }));
+    void refresh();
   }
 }
 
 export function selectFolder(folder: string): void {
-  setState({ selectedFolder: folder, isLoading: true, sessions: [] })
-  void refresh()
+  setState({ selectedFolder: folder, isLoading: true, sessions: [] });
+  void refresh();
 }
 
 export function removeFolder(folder: string): void {
   setState((current) => {
     if (current.folders.length < 2) {
-      return {}
+      return {};
     }
-    const folders = current.folders.filter((item) => item !== folder)
-    return { folders, selectedFolder: current.selectedFolder === folder ? folders[0] : current.selectedFolder }
-  })
-  void refresh()
+    const folders = current.folders.filter((item) => item !== folder);
+    return {
+      folders,
+      selectedFolder:
+        current.selectedFolder === folder ? folders[0] : current.selectedFolder,
+    };
+  });
+  void refresh();
 }
 
 export function setSplit(patch: { splitX?: number; splitY?: number }): void {
-  const clamp = (value: number): number => Math.min(0.85, Math.max(0.15, value))
+  const clamp = (value: number): number =>
+    Math.min(0.85, Math.max(0.15, value));
   setState({
     ...(patch.splitX === undefined ? {} : { splitX: clamp(patch.splitX) }),
-    ...(patch.splitY === undefined ? {} : { splitY: clamp(patch.splitY) })
-  })
+    ...(patch.splitY === undefined ? {} : { splitY: clamp(patch.splitY) }),
+  });
 }
 
 // MARK: Data from the main process
 
-let scanning = false
-let scanAgain = false
+let scanning = false;
+let scanAgain = false;
 
 function openRefs(): OpenTabRef[] {
-  return getState().tabs.map((tab) => ({ id: tab.id, folder: tab.folder, title: tab.title }))
+  return getState().tabs.map((tab) => ({
+    id: tab.id,
+    folder: tab.folder,
+    title: tab.title,
+  }));
 }
 
 function syncOpenTabs(): void {
-  hive().setOpenTabs(openRefs())
+  hive().setOpenTabs(openRefs());
 }
 
 /** Reads the sessions of the selected folder and the open tabs. Tab titles follow the session names, also after /rename. */
 export async function refresh(): Promise<void> {
   if (scanning) {
-    scanAgain = true
-    return
+    scanAgain = true;
+    return;
   }
-  scanning = true
-  const folder = getState().selectedFolder
+  scanning = true;
+  const folder = getState().selectedFolder;
   try {
-    const result = await hive().scan(folder, openRefs())
+    const result = await hive().scan(folder, openRefs());
     if (folder === getState().selectedFolder) {
-      setState({ sessions: result.sessions, isLoading: false })
+      setState({ sessions: result.sessions, isLoading: false });
     }
-    const renamed = new Map(result.open.map((session) => [session.id, session.title]))
+    const renamed = new Map(
+      result.open.map((session) => [session.id, session.title]),
+    );
     setState((current) => {
-      const tabs = current.tabs.map((tab) => ({ ...tab, title: renamed.get(tab.id) ?? tab.title }))
-      const changed = tabs.some((tab, index) => tab.title !== current.tabs[index].title)
-      return { openSessions: result.open, ...(changed ? { tabs } : {}) }
-    })
-    syncOpenTabs()
+      const tabs = current.tabs.map((tab) => ({
+        ...tab,
+        title: renamed.get(tab.id) ?? tab.title,
+      }));
+      const changed = tabs.some(
+        (tab, index) => tab.title !== current.tabs[index]?.title,
+      );
+      return { openSessions: result.open, ...(changed ? { tabs } : {}) };
+    });
+    syncOpenTabs();
   } finally {
-    scanning = false
+    scanning = false;
     if (scanAgain) {
-      scanAgain = false
-      void refresh()
+      scanAgain = false;
+      void refresh();
     }
   }
 }
 
 export async function refreshUsage(): Promise<void> {
-  setState({ usage: await hive().readUsage() })
+  setState({ usage: await hive().readUsage() });
 }
 
 export async function refreshHooks(): Promise<void> {
-  setState({ hooks: await hive().hooksStatus() })
+  setState({ hooks: await hive().hooksStatus() });
 }
 
 export async function installHooks(): Promise<void> {
-  setState({ hooks: await hive().installHooks() })
-  void refreshUsage()
+  setState({ hooks: await hive().installHooks() });
+  void refreshUsage();
 }
 
-let searchToken = 0
+let searchToken = 0;
 
 export function setQuery(query: string): void {
-  setState({ query })
-  const text = query.trim()
-  searchToken += 1
-  const token = searchToken
+  setState({ query });
+  const text = query.trim();
+  searchToken += 1;
+  const token = searchToken;
   if (text.length < 2) {
-    setState({ contentMatches: [], isSearching: false })
-    return
+    setState({ contentMatches: [], isSearching: false });
+    return;
   }
-  setState({ isSearching: true })
+  setState({ isSearching: true });
   setTimeout(async () => {
     if (token !== searchToken) {
-      return
+      return;
     }
-    const ids = await hive().search(getState().selectedFolder, text)
+    const ids = await hive().search(getState().selectedFolder, text);
     if (token === searchToken) {
-      setState({ contentMatches: ids, isSearching: false })
+      setState({ contentMatches: ids, isSearching: false });
     }
-  }, 300)
+  }, 300);
 }
 
 export function focusSelected(): void {
-  const { selectedTabId } = getState()
+  const { selectedTabId } = getState();
   if (selectedTabId) {
-    focusEntry(selectedTabId)
+    focusEntry(selectedTabId);
   }
 }
 
 /** Starts the polling and the listeners of the main window. */
 export async function startMainWindow(): Promise<void> {
-  const state = getState()
-  if (state.folders.length === 1 && state.folders[0] === hive().home && !localStorage.getItem('hive.settings.v1')) {
-    const folder = await hive().defaultFolder()
-    setState({ folders: [folder], selectedFolder: folder })
+  const state = getState();
+  if (
+    state.folders.length === 1 &&
+    state.folders[0] === hive().home &&
+    !localStorage.getItem("hive.settings.v1")
+  ) {
+    const folder = await hive().defaultFolder();
+    setState({ folders: [folder], selectedFolder: folder });
   }
   onProcessExit((exit) => {
     // A process that ends by itself (/exit) closes its tab. One that fails right away keeps it, so the error stays readable.
-    if (getEntry(exit.id) && (exit.exitCode === 0 || exit.ranMs >= 3000) && getState().tabs.some((tab) => tab.id === exit.id)) {
-      closeTab(exit.id)
+    if (
+      getEntry(exit.id) &&
+      (exit.exitCode === 0 || exit.ranMs >= 3000) &&
+      getState().tabs.some((tab) => tab.id === exit.id)
+    ) {
+      closeTab(exit.id);
     }
-  })
+  });
   hive().windows.onDockedBack((id) => {
     if (getState().tabs.some((tab) => tab.id === id)) {
-      applyPanes(dockBack(paneState(), id))
+      applyPanes(dockBack(paneState(), id));
     }
-  })
+  });
   hive().windows.onReveal((id) => {
     if (getState().tabs.some((tab) => tab.id === id)) {
-      activateTab(id)
+      activateTab(id);
     }
-  })
-  void refresh()
-  void refreshUsage()
-  void refreshHooks()
-  setInterval(() => void refresh(), 1500)
-  setInterval(() => void refreshUsage(), 5000)
+  });
+  void refresh();
+  void refreshUsage();
+  void refreshHooks();
+  setInterval(() => void refresh(), 1500);
+  setInterval(() => void refreshUsage(), 5000);
 }

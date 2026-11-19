@@ -8,7 +8,7 @@ on:
     paths: [package.json, package-lock.json]
   schedule:
     # A new advisory can appear without any change in the repository. Run every Monday at 05:00 UTC.
-    - cron: '0 5 * * 1'
+    - cron: "0 5 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -19,7 +19,7 @@ jobs:
     name: npm audit
     runs-on: ubuntu-latest
     env:
-      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

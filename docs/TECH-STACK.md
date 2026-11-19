@@ -7,7 +7,8 @@ This file describes how Hive is built, how to run and test it, and why. `docs/FE
 - App shell: Electron 45.
 - Build: electron-vite 6 with Vite 8.
 - Interface: React 19 with plain CSS.
-- Language: TypeScript 7, strict.
+- Language: TypeScript 7, with `strict` and the extra checks in section 11.1.
+- Code style and lint: Biome 2, with its default style. Section 11.1 has the details.
 - Terminal view: `@xterm/xterm` 6 with the fit and web links addons.
 - Terminal process: `node-pty` 1.1, with prebuilt binaries and no compile step.
 - Packaging: electron-builder 26.
@@ -112,8 +113,16 @@ The scripts run with the real `node` that the login shell finds. Without Node, t
 - `npm run dev:watch` also restarts the whole app after a change in the main process. A restart ends all terminals. Do not use it for Hive inside Hive.
 - `npm test` runs 45 unit tests. They cover the placement rules, the tab reorder, the saved session, formatting, the scanner, the search, the paths, the link rules and the agent transcripts.
 - `npm run test:e2e` builds the app and runs the end-to-end tests. They start the real app, so they need a screen. See section 12.3.
-- `npm run typecheck`, `npm run build` and `npm run dist` (an installer for the current system) are also available.
+- `npm run typecheck`, `npm run lint`, `npm run build` and `npm run dist` (an installer for the current system) are also available. `npm run lint:fix` formats the code and applies the safe fixes.
 - The installers are not signed with a trusted certificate, because none exists. Section 14 has the details. On macOS, open the app with a right click and "Open".
+
+### 11.1 Strict checks and style
+
+- The compiler runs with `strict` and these extra options: `noUncheckedIndexedAccess`, `noImplicitReturns`, `noFallthroughCasesInSwitch`, `noUnusedLocals`, `noUnusedParameters`, `noImplicitOverride` and `forceConsistentCasingInFileNames`. With `noUncheckedIndexedAccess`, a read from an array or a record can give `undefined`. Handle that case in the code.
+- Biome checks the code and formats it. The file `biome.json` holds the rules. The style is the common Prettier style: double quotes, semicolons, trailing commas, 80 columns and 2 spaces. Biome has these defaults, so the config only sets the spaces.
+- The lint rules are the recommended set, plus these errors: unused imports, variables and parameters, `any`, non-null assertions, floating promises, hook dependencies, `console`, import cycles and shadowed names. `console` is allowed in `scripts/`, in `e2e/` and in `src/main/index.ts`, because they print on purpose.
+- A rule that does not fit one place can be turned off there with a `biome-ignore` comment. The comment must give the reason after the colon.
+- Every text file uses LF line endings. `.gitattributes` and `.editorconfig` set this, and Git does not convert line endings on this repository.
 
 ## 12. Tests with the real window
 
@@ -146,7 +155,7 @@ The tests in `e2e/` start the built app (`out/main/index.js`) with Playwright an
 
 ## 13. Pipelines and updates
 
-- `.github/workflows/ci.yml` runs on each push to `main` and on each pull request. The job "Typecheck, test and build" runs `npm ci`, `npm run typecheck`, `npm test` and `npm run build` on Ubuntu and on Windows. The install skips the Electron binary, because these steps do not need it. The job "End-to-end tests" runs `npm run test:e2e` on both systems, with the Electron binary and, on Linux, with `xvfb-run`.
+- `.github/workflows/ci.yml` runs on each push to `main` and on each pull request. The job "Typecheck, test and build" runs `npm ci`, `npm run typecheck`, `npm run lint`, `npm test` and `npm run build` on Ubuntu and on Windows. The install skips the Electron binary, because these steps do not need it. The job "End-to-end tests" runs `npm run test:e2e` on both systems, with the Electron binary and, on Linux, with `xvfb-run`.
 - `.github/workflows/audit.yml` runs `npm audit`. It runs when `package.json` or `package-lock.json` changes, and every Monday at 05:00 UTC. A finding of high severity or more in the packages that ship in the app fails the run. A finding in the build tools only gives a warning, because a fix does not always exist.
 - `renovate.json` configures Renovate. Renovate opens pull requests for updates on Monday before 06:00 (Amsterdam time). It groups the minor and patch updates of the dev packages and of the GitHub Actions. It waits 3 days after a release. The next bullets say which updates merge on their own. A major update of `electron`, `node-pty`, `electron-builder` or `@xterm/xterm` gets its own pull request with the label `needs-manual-test`.
 - Renovate needs the Renovate GitHub App on the repository. The file alone does nothing until the owner installs the app.
@@ -171,6 +180,7 @@ The workflow `.github/workflows/release.yml` builds the installers and makes a d
 
 ## 15. Decisions and why
 
+- Biome, not ESLint. TypeScript 7 is the native compiler and has no JavaScript API. `typescript-eslint` needs that API, so it cannot run on this project. Biome has its own parser, needs no other package, and does both lint and format. It has no rules that use the full type information. The compiler covers that part.
 - Electron, not Tauri. The terminal needs a pseudo terminal. `node-pty` has prebuilt binaries, so there is no Rust and no compile step. The owner knows TypeScript.
 - Hive replaces Swift in the same repository. The owner wanted one code base for all systems. The `swift-v1` tag keeps the old app.
 - The placement rules are pure functions. The rules are tricky. The pure form makes them testable and stable.

@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    tags: ['v*']
+    tags: ["v*"]
   # A manual run builds the installers and keeps them as workflow artifacts for 7 days. It does not make a release.
   workflow_dispatch:
 
