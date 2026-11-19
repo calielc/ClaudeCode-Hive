@@ -1,6 +1,6 @@
 # Hive: tech stack and architecture
 
-This file describes how Hive is built, how to run and test it, and why. `docs/FEATURES.md` describes the product side. `CLAUDE.md` has the working rules for agents. The text matches the code at commit `f525f08`.
+This file describes how Hive is built, how to run and test it, and why. `docs/FEATURES.md` describes the product side. `CLAUDE.md` has the working rules for agents. The text matches the code at commit `94ac888`.
 
 ## 1. Stack
 
@@ -12,6 +12,7 @@ This file describes how Hive is built, how to run and test it, and why. `docs/FE
 - Terminal view: `@xterm/xterm` 6 with the fit and web links addons.
 - Terminal process: `node-pty` 1.1, with prebuilt binaries and no compile step.
 - Packaging: electron-builder 26.
+- Git hook: Husky 9, with the pre-commit hook of section 11.1.
 - Tests: `node:test`, run with `tsx`. The end-to-end tests drive the real app with `playwright-core`.
 
 All direct packages had the latest version on 2026-11-18. The `overrides` entry in `package.json` forces `minimatch` to 11.0.1 or later. This fixes its advisory.
@@ -45,6 +46,9 @@ All direct packages had the latest version on 2026-11-18. The `overrides` entry 
 - `src/renderer/themes.ts`, `format.ts`, `shortcuts.ts` and `styles.css`: themes and tag colors, formatting, keys and styles.
 - `e2e/`: the end-to-end tests. `app.ts` starts Hive, `fixture.ts` makes the fake sessions, and `fake-claude.cjs` replaces the `claude` command. See section 12.3.
 - `scripts/make-icon.cjs`: draws `build/icon.png`. Run it with `npx electron scripts/make-icon.cjs`.
+- `scripts/next-version.ts`, `git-version.ts` and `release-version.ts`: the rules for the version of a release, the reading of git, and the command that the release workflow runs. `scripts/dist.ts` builds a local installer with a draft version. See section 14.
+- `biome.json`, `.editorconfig`, `.gitattributes` and `.husky/pre-commit`: the lint and the style, the line endings and the commit hook. See section 11.1.
+- `.github/`: the workflows `ci.yml`, `audit.yml`, `release.yml` and `pr-title.yml`, and the file `CODEOWNERS`. `renovate.json` in the root configures Renovate. See section 13.
 - `scripts/brand-electron.cjs`: gives the dev `Electron.app` the name and the icon of Hive. `npm run dev` runs it first.
 
 ## 4. Data sources and formats
@@ -143,6 +147,10 @@ The scripts run with the real `node` that the login shell finds. Without Node, t
 - Remove `ELECTRON_RENDERER_URL` from the environment of a test run, with `env -u ELECTRON_RENDERER_URL`. A shell inside the dev app inherits it. Then the test loads the dev server and not the build.
 - A window that other windows cover does not paint, and its picture shows an old frame. Test mode sets the Chromium switches that make the window paint at all times.
 - On macOS, `date +%N` does not work. Use plain `date` in fake commands.
+- After a new selection, the app moves the keyboard to the terminal at 0, 80 and 300 ms. A test that moves the focus itself must call `settleFocus()` from `e2e/app.ts` first. A text field in use keeps the focus.
+- An app that is not installed reports the version of Electron, and on Linux it reports "0.0". Do not rely on `app.getVersion()` in a test. Use `HIVE_UPDATE_CURRENT_VERSION`.
+- Run a test that fails now and then 10 or 20 times in a loop before you call it fixed. `Emulation.setCPUThrottlingRate` of the Chrome DevTools protocol slows the page and makes a race show.
+- To run the Linux jobs of the CI on a Windows or macOS machine, use Docker. Start a container from `node:24-bookworm`. Copy the sources into it without `node_modules`, `out` and `dist`. Install the system libraries of Electron (`xvfb`, `libgtk-3-0`, `libnss3`, `libgbm1`, `libasound2` and a few more) with `apt-get`, run `npm ci`, and then run `xvfb-run --auto-servernum npm run test:e2e` with `SHELL=/bin/bash`. This found a fault that only Linux showed.
 
 ### 12.3 End-to-end tests
 
@@ -162,8 +170,10 @@ The tests in `e2e/` start the built app (`out/main/index.js`) with Playwright an
 - `.github/workflows/audit.yml` runs `npm audit`. It runs when `package.json` or `package-lock.json` changes, and every Monday at 05:00 UTC. A finding of high severity or more in the packages that ship in the app fails the run. A finding in the build tools only gives a warning, because a fix does not always exist.
 - `renovate.json` configures Renovate. Renovate opens pull requests for updates on Monday before 06:00 (Amsterdam time). It groups the minor and patch updates of the dev packages and of the GitHub Actions. It waits 3 days after a release. The next bullets say which updates merge on their own. A major update of `electron`, `node-pty`, `electron-builder` or `@xterm/xterm` gets its own pull request with the label `needs-manual-test`.
 - Renovate needs the Renovate GitHub App on the repository. The file alone does nothing until the owner installs the app.
-- The ruleset "Protect main" protects the branch `main`. A pull request must pass four CI jobs before it can merge: "Typecheck, test and build" and "End-to-end tests", each on Ubuntu and on Windows. It also needs the approval of the owner, which the file `.github/CODEOWNERS` names. A new commit in the pull request removes the approval. No one can force-push to `main` or delete it.
-- Two actors can bypass the ruleset. The repository admin (the owner) can push to `main` directly. GitHub does not let you approve your own pull request, so the owner merges the own pull requests as admin. The Renovate app can bypass the approval rule through a pull request only. It cannot push to `main` directly.
+- The ruleset "Protect main" protects the branch `main`. A change reaches `main` only through a pull request. The pull request needs three things before it can merge. The four CI jobs must pass: "Typecheck, test and build" and "End-to-end tests", each on Ubuntu and on Windows. The branch must contain the current `main` (the "strict" setting), so the checks run on the result of the merge. The owner must approve it, which the file `.github/CODEOWNERS` names. A new commit in the pull request removes the approval. No one can force-push to `main` or delete it.
+- Two actors can bypass the ruleset, both in the mode "pull request" only. This mode lets them merge a pull request without the approval. It does not let them push to `main`. The repository admin (the owner) uses it, because GitHub does not let you approve your own pull request. The Renovate app uses it for its own pull requests. The owner brings `main` into the pull request first (`gh pr update-branch <number>` or the button on the page), waits for the checks and then merges.
+- `.github/workflows/pr-title.yml` checks the title of each pull request. The title must have the form `type: description` with a known type. This check is not in the required checks of the ruleset yet.
+- The steps of a change: make a branch, commit there (the pre-commit hook runs), push it, open a pull request with a title in the form `type: description`, wait for the checks, bring `main` into the branch and squash merge. The squash commit takes the title of the pull request as its message. The release workflow reads that message (section 14).
 - Renovate merges these updates on its own, after the CI jobs pass: minor and patch updates of the dev packages and of the GitHub Actions, patch updates of the app packages, and the monthly lock file update. Every other update waits for the approval of the owner. `electron`, `node-pty`, `electron-builder` and the `@xterm` packages never merge on their own.
 - Do not accept the `--force` fixes of `npm audit`. They downgrade Vite and electron-builder.
 
@@ -199,6 +209,10 @@ The workflow `.github/workflows/release.yml` gives each merge to `main` a versio
 ## 15. Decisions and why
 
 - Husky for the pre-commit hook. It is the common tool, and `.husky/pre-commit` is a plain file in the repository. Biome checks the staged files itself with `--staged`, so lint-staged is not needed.
+- Changes go through pull requests and are squash merged. The title of the pull request is the commit message, and its type chooses the version. This gives one commit for each change and a version rule that needs no extra file.
+- The owner publishes each release by hand. The workflow only makes the draft, so a person reads the notes and the files before they are public.
+- The version lives in the tag and not in `package.json`. A bot must not commit to a protected `main`, so the build sets the number for itself.
+- The app shows a notice for a new release and does not update itself. A self-update needs a signed macOS app, and none exists yet.
 - Biome, not ESLint. TypeScript 7 is the native compiler and has no JavaScript API. `typescript-eslint` needs that API, so it cannot run on this project. Biome has its own parser, needs no other package, and does both lint and format. It has no rules that use the full type information. The compiler covers that part.
 - Electron, not Tauri. The terminal needs a pseudo terminal. `node-pty` has prebuilt binaries, so there is no Rust and no compile step. The owner knows TypeScript.
 - Hive replaces Swift in the same repository. The owner wanted one code base for all systems. The `swift-v1` tag keeps the old app.
