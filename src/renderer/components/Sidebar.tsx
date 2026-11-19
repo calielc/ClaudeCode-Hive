@@ -116,12 +116,14 @@ function FolderRow() {
 function SearchField() {
   const query = useStore((state) => state.query);
   const searching = useStore((state) => state.isSearching);
+  const request = useStore((state) => state.searchFocusRequest);
   const input = useRef<HTMLInputElement>(null);
+  // The effect runs after the page has shown the panel, so the field can take the focus.
   useEffect(() => {
-    const focus = (): void => input.current?.focus();
-    window.addEventListener("hive:focus-search", focus);
-    return () => window.removeEventListener("hive:focus-search", focus);
-  }, []);
+    if (request > 0) {
+      input.current?.focus();
+    }
+  }, [request]);
   return (
     <div className="search">
       <span className="search-icon">⌕</span>
