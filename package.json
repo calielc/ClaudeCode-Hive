@@ -15,6 +15,7 @@
     "dist": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/dist.ts",
     "dist:release": "electron-vite build && electron-builder",
     "test": "tsx --test src/main/*.test.ts src/renderer/*.test.ts scripts/*.test.ts",
+    "screenshots": "npm run build && tsx e2e/screenshots.ts",
     "test:e2e": "npm run build && tsx --test --test-concurrency=1 e2e/*.e2e.ts",
     "prepare": "husky",
     "postinstall": "node -e \"const fs=require('fs'),p=require('path');const d=p.join('node_modules','node-pty','prebuilds');if(fs.existsSync(d))for(const f of fs.readdirSync(d)){const h=p.join(d,f,'spawn-helper');if(fs.existsSync(h))fs.chmodSync(h,0o755)}\"",
