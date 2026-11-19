@@ -2,6 +2,10 @@
 
 Hive is a desktop app for working with many Claude Code sessions at once. It lists the sessions of a folder on the left and runs the real `claude` command in terminal panes on the right. It runs on macOS, Windows and Linux.
 
+![Hive with two sessions side by side: the list of sessions on the left, two terminals on the right](docs/images/overview.png)
+
+The picture shows demo data. `docs/FEATURES.md` describes every feature with more pictures.
+
 This is the Electron version. The earlier native macOS version in Swift is kept in the git tag `swift-v1`.
 
 ## Features

@@ -46,7 +46,7 @@ function setAge(file: string, ageMs: number): void {
   utimesSync(file, when, when);
 }
 
-interface SessionSpec {
+export interface SessionSpec {
   id: string;
   title: string;
   branch: string;
@@ -69,7 +69,7 @@ export interface AgentSpec {
   ageMs?: number;
 }
 
-function writeSession(fixture: Fixture, spec: SessionSpec): void {
+export function writeSession(fixture: Fixture, spec: SessionSpec): void {
   const file = join(fixture.projectDirectory, `${spec.id}.jsonl`);
   const lines = [
     { type: "custom-title", customTitle: spec.title },
@@ -132,10 +132,13 @@ export function writeAgent(
 /**
  * Four sessions in the folder that Hive lists at the start:
  * "Fix login flow" works, "Refactor search" waits, "Write release notes" is ready, and "Old idea" is three days old.
+ * `homeName` is the name of the folder, which Hive shows as the repository. `withSessions: false` gives an empty folder.
  */
-export function createFixture(): Fixture {
+export function createFixture(
+  options: { homeName?: string; withSessions?: boolean } = {},
+): Fixture {
   const root = mkdtempSync(join(tmpdir(), "hive-e2e-"));
-  const home = join(root, "home");
+  const home = join(root, options.homeName ?? "home");
   mkdirSync(join(home, ".git"), { recursive: true });
   mkdirSync(join(home, ".claude"), { recursive: true });
   const projectDirectory = join(home, ".claude", "projects", folderName(home));
@@ -153,6 +156,9 @@ export function createFixture(): Fixture {
         retryDelay: 200,
       }),
   };
+  if (options.withSessions === false) {
+    return fixture;
+  }
   writeSession(fixture, {
     id: IDS.login,
     title: "Fix login flow",

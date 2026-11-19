@@ -41,10 +41,10 @@ interface Running {
   startedAt: number;
 }
 
-/** The command a session runs. `HIVE_PTY_COMMAND` replaces it, so tests do not start Claude. */
+/** The command a session runs. `HIVE_PTY_COMMAND` replaces it, so tests do not start Claude. `{id}` in it becomes the session id. */
 export function sessionCommand(id: string, resume: boolean): string {
   if (process.env.HIVE_PTY_COMMAND) {
-    return process.env.HIVE_PTY_COMMAND;
+    return process.env.HIVE_PTY_COMMAND.replaceAll("{id}", id);
   }
   return resume ? `claude --resume ${id}` : `claude --session-id ${id}`;
 }
