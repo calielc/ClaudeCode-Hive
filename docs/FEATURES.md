@@ -1,10 +1,10 @@
 # Hive: product features
 
-This file describes what Hive does for the user. `docs/TECH-STACK.md` describes the technical side. `CLAUDE.md` has the working rules for agents. The text matches the code at commit `f525f08`.
+This file describes what Hive does for the user. `docs/TECH-STACK.md` describes the technical side. `CLAUDE.md` has the working rules for agents. The text matches the code at commit `94ac888`.
 
 ## 1. What Hive is
 
-Hive lists the Claude Code sessions of a folder on the left. It runs the real `claude` command in terminal panes on the right. It shows which sessions work, which sessions wait for you, and which sessions are ready. It runs on macOS, Windows and Linux. Only macOS is tested.
+Hive lists the Claude Code sessions of a folder on the left. It runs the real `claude` command in terminal panes on the right. It shows which sessions work, which sessions wait for you, and which sessions are ready. It runs on macOS, Windows and Linux. The CI runs the automated tests on Windows and Linux. The release build checks macOS.
 
 The owner is a developer who runs many sessions in parallel. The goals are a view of all sessions at a glance and fast switching. The app also puts sessions side by side. It signals a session that needs attention.
 

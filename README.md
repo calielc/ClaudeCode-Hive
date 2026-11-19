@@ -61,11 +61,20 @@ Other commands:
 - `npm test` runs the unit tests.
 - `npm run test:e2e` starts the real app and runs the end-to-end tests.
 - `npm run typecheck` checks the types.
+- `npm run lint` checks the code and the style. `npm run lint:fix` formats the code and applies the safe fixes.
 - `npm run dist` builds an installer for the system you are on. The version is the next release version with a draft mark, for example `2.1.0-draft.3`, so a local file is never mistaken for a release.
 
 Each merge to `main` can make a new version. The commit type decides: `feat` gives a minor version, `fix` and `perf` give a patch version, and `feat!:` or a `BREAKING CHANGE:` line gives a major version. The other types make no release. The release workflow builds the installers and makes a draft release. You publish the draft by hand. Squash merge the pull requests, and give each one a title in the form `type: description`. `docs/TECH-STACK.md`, section 14, describes it.
 
 The renderer is React with `xterm.js`. The main process runs the terminals with `node-pty`, reads the session files and sends notifications. Run `npx electron scripts/make-icon.cjs` to draw the icon again.
+
+## Contribute
+
+The branch `main` is protected. A change goes in a branch and reaches `main` through a pull request.
+
+- Give the pull request a title in the form `type: description`. The types are `feat`, `fix`, `perf`, `refactor`, `docs`, `test`, `chore`, `ci`, `build`, `style` and `revert`. Squash merge the pull request. The type chooses the version.
+- Bring `main` into the branch before you merge. The checks must pass on that result.
+- Run `npm run typecheck`, `npm run lint` and `npm test` before you push. A pre-commit hook runs the lint on the files that you commit.
 
 ## Status hooks and usage limits
 
@@ -89,4 +98,4 @@ Set `HIVE_DEBUG=1` to get `window.__hive` in the page. Set `HIVE_PTY_COMMAND` to
 
 ## Windows
 
-The Windows build is not tested yet. Terminals use `cmd.exe`, and the session folder names follow the rule Claude Code uses for Windows paths.
+The CI runs the automated tests on Windows. The release workflow builds the installer and starts the packaged app once. Terminals use `cmd.exe`, and the session folder names follow the rule Claude Code uses for Windows paths.
