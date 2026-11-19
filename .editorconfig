@@ -1,12 +1,102 @@
+# EditorConfig: https://editorconfig.org
+# Most editors read this file. Biome (biome.json) and Git (.gitattributes) use the same values for the code style and
+# the line endings. If you change a value here, change it there too.
+
+# The top-most EditorConfig file. No file above this folder counts.
 root = true
 
+# ----------------------------------------------------------------------------
+# All files
+# ----------------------------------------------------------------------------
 [*]
 charset = utf-8
 end_of_line = lf
-insert_final_newline = true
 indent_style = space
 indent_size = 2
+insert_final_newline = true
 trim_trailing_whitespace = true
 
-[*.md]
+# ----------------------------------------------------------------------------
+# The languages of this repository
+# ----------------------------------------------------------------------------
+
+# TypeScript and JavaScript. The line width is the one of the formatter (Biome, 80 columns).
+[*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}]
+indent_size = 2
+max_line_length = 80
+
+# JSON. npm writes package.json and package-lock.json with two spaces.
+[*.{json,jsonc,json5}]
+indent_size = 2
+
+[{package.json,package-lock.json}]
+indent_size = 2
+
+# YAML: the GitHub workflows and the Renovate and Husky files. YAML does not allow tabs.
+[*.{yml,yaml}]
+indent_size = 2
+
+# Markdown. Two spaces at the end of a line are a line break, and a long line is fine.
+[*.{md,markdown}]
+indent_size = 2
 trim_trailing_whitespace = false
+max_line_length = off
+
+# HTML and CSS.
+[*.{html,htm,css,scss,less}]
+indent_size = 2
+
+# Shell scripts, for example .husky/pre-commit. They must have LF line endings.
+[*.{sh,bash,zsh}]
+indent_size = 2
+end_of_line = lf
+
+# ----------------------------------------------------------------------------
+# Other file types that a project often gets
+# ----------------------------------------------------------------------------
+
+# Makefiles need tabs.
+[{Makefile,makefile,*.mk}]
+indent_style = tab
+
+# Go uses tabs.
+[*.go]
+indent_style = tab
+
+# Python, Rust, Java, Kotlin and C# use four spaces.
+[*.{py,rs,java,kt,kts,cs}]
+indent_size = 4
+
+# PowerShell scripts.
+[*.{ps1,psm1}]
+indent_size = 4
+
+# Git files use tabs.
+[{.gitconfig,.gitmodules}]
+indent_style = tab
+
+# ----------------------------------------------------------------------------
+# Files that must keep every character
+# ----------------------------------------------------------------------------
+
+# A patch, a snapshot or a lock file of another tool must not change.
+[*.{diff,patch,snap}]
+trim_trailing_whitespace = false
+insert_final_newline = unset
+
+# The license text keeps its own layout.
+[{LICENSE,LICENSE.*,COPYING}]
+indent_style = unset
+indent_size = unset
+trim_trailing_whitespace = false
+
+# Minified and built files are not for people to edit.
+[*.min.{js,css}]
+indent_style = unset
+indent_size = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+max_line_length = off
+
+# Windows batch files need CRLF. Hive has none. If you add one, also set `*.{bat,cmd} eol=crlf` in .gitattributes,
+# because that file now makes every text file LF.
