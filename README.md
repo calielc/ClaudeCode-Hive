@@ -18,6 +18,12 @@ This is the Electron version. The earlier native macOS version in Swift is kept 
 - Usage bars for the 5 hour window and the weekly limit.
 - A notice in the top bar when a newer release exists. Hive checks every 4 hours. It does not update itself.
 
+## License
+
+Hive uses the MIT license. See the file `LICENSE`. You can use, copy, change and share the code, also for commercial work, if you keep the copyright line and the license text. The software has no warranty.
+
+Hive is not affiliated with Anthropic. It runs the `claude` command of Claude Code, which you install and license on your own. Claude is a trademark of Anthropic.
+
 ## More documentation
 
 - `docs/FEATURES.md` describes every product feature and the placement rules for panes and tabs.

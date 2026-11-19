@@ -3,6 +3,7 @@
   "productName": "Hive",
   "version": "2.0.0",
   "description": "Work with many Claude Code sessions at once",
+  "license": "MIT",
   "main": "out/main/index.js",
   "private": true,
   "scripts": {
