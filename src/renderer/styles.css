@@ -579,16 +579,25 @@ button {
   border-color: var(--accent);
 }
 
+.topbar-fill {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 /* The tabs scroll sideways only when they do not fit. Overscroll is off, so they cannot be pushed out of view. */
 .tabs {
   display: flex;
-  flex: 1;
+  flex: 0 1 auto;
   gap: 4px;
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior: none;
   scrollbar-width: none;
+}
+
+.tabs:empty {
+  display: none;
 }
 
 .tabs::-webkit-scrollbar {
