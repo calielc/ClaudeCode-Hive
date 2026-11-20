@@ -4,23 +4,13 @@ Hive is a desktop app for working with many Claude Code sessions at once. It lis
 
 ![Hive with two sessions side by side: the list of sessions on the left, two terminals on the right](docs/images/overview.png)
 
-The picture shows demo data. `docs/FEATURES.md` describes every feature with more pictures.
+The picture shows demo data.
 
 This is the Electron version. The earlier native macOS version in Swift is kept in the git tag `swift-v1`.
 
 ## Features
 
-- The left panel shows the open sessions as cards on top, in tab order, then the sessions of the last 24 hours, then older ones.
-- Each card shows the repo, branch, model, running agents and the last prompt.
-- Live status per session (working, waiting for you, ready), taken from Claude Code hooks.
-- Full text search over the names and the conversations of the selected folder.
-- Layouts with 1, 2 or 4 panes. Select a pane, then pick a tab or a session to put it there. A tab that is already visible only selects its pane. You can also drag a session or a tab onto a pane.
-- Undock a session into its own window, for example on another display, and dock it again.
-- Links in the terminal, also long ones that wrap over several lines, open in your default browser, where you are already logged in. Only web and mail links open.
-- Colour tags for sessions and six terminal colour themes.
-- If a session finishes or needs you and Hive is not the active window, the system shows a notification.
-- Usage bars for the 5 hour window and the weekly limit.
-- A notice in the top bar when a newer release exists. Hive checks every 4 hours. It does not update itself.
+Hive shows all your sessions with their live status, searches the conversations, puts up to four terminals side by side, can move a session to its own window, and sends a notification when a session needs you. `docs/FEATURES.md` describes every feature, the keys and the placement rules, with pictures.
 
 ## License
 
@@ -30,18 +20,9 @@ Hive is not affiliated with Anthropic. It runs the `claude` command of Claude Co
 
 ## More documentation
 
-- `docs/FEATURES.md` describes every product feature and the placement rules for panes and tabs.
+- `docs/FEATURES.md` describes every product feature, the keys and the placement rules for panes and tabs.
 - `docs/TECH-STACK.md` describes the stack, the architecture, the data formats, the tests and the decisions.
 - `CLAUDE.md` holds the working rules for agents and people who change the code.
-
-## Keys
-
-- Next tab and previous tab: Ctrl+Tab and Ctrl+Shift+Tab, on every system.
-- New session: Cmd+N on macOS, Ctrl+N elsewhere.
-- Search: Cmd+F on macOS, Ctrl+F elsewhere.
-- Hide or show the left panel: Cmd+B on macOS, Ctrl+B elsewhere.
-
-Plain Shift+Tab goes to Claude Code.
 
 ## Download
 
