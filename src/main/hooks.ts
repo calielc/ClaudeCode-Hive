@@ -9,27 +9,10 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import type { HooksStatus } from "@shared/types";
+import { hooksStatusOf, type Json, mergeSettings } from "./hooks-settings";
 import { claudeDirectory, hiveDirectory } from "./paths";
 import hookScript from "./scripts/hook.cjs?raw";
 import tapScript from "./scripts/statusline-tap.cjs?raw";
-
-type Json = Record<string, unknown>;
-interface HookEntry {
-  type?: string;
-  command?: string;
-}
-interface HookGroup {
-  hooks?: HookEntry[];
-}
-
-const EVENTS: Record<string, string> = {
-  SessionStart: "ready",
-  UserPromptSubmit: "working",
-  PreToolUse: "working",
-  Notification: "waiting",
-  Stop: "ready",
-  SessionEnd: "end",
-};
 
 const settingsFile = (): string => join(claudeDirectory(), "settings.json");
 const hookFile = (): string => join(hiveDirectory(), "hook.cjs");
@@ -74,33 +57,8 @@ function runner(): string {
   return `ELECTRON_RUN_AS_NODE=1 "${process.execPath}"`;
 }
 
-function isOurHook(command: string | undefined): boolean {
-  return Boolean(
-    command?.includes(".claude-sessions") && /hook\.(cjs|py)/.test(command),
-  );
-}
-
-function isOurTap(command: string | undefined): boolean {
-  return Boolean(
-    command?.includes(".claude-sessions") &&
-      /statusline-tap\.(cjs|py)/.test(command),
-  );
-}
-
 export function hooksStatus(): HooksStatus {
-  const settings = readSettings();
-  const hooks = (settings.hooks ?? {}) as Record<string, HookGroup[]>;
-  const stop = hooks.Stop ?? [];
-  const hooksInstalled = stop.some((group) =>
-    (group.hooks ?? []).some((entry) => entry.command?.includes("hook.cjs")),
-  );
-  const statusLine = settings.statusLine as HookEntry | undefined;
-  return {
-    hooksInstalled,
-    usageInstalled: Boolean(
-      statusLine?.command?.includes("statusline-tap.cjs"),
-    ),
-  };
+  return hooksStatusOf(readSettings());
 }
 
 /**
@@ -119,38 +77,19 @@ export function installHooks(): HooksStatus {
     copyFileSync(settingsFile(), `${settingsFile()}.bak-hive`);
   }
 
-  const command = runner();
-  const hooks = (settings.hooks ?? {}) as Record<string, HookGroup[]>;
-  for (const [event, state] of Object.entries(EVENTS)) {
-    // Drop our own older entries (also the Python ones), keep everything else.
-    const groups = (hooks[event] ?? [])
-      .map((group) => ({
-        ...group,
-        hooks: (group.hooks ?? []).filter((entry) => !isOurHook(entry.command)),
-      }))
-      .filter((group) => group.hooks.length > 0);
-    groups.push({
-      hooks: [
-        { type: "command", command: `${command} "${hookFile()}" ${state}` },
-      ],
-    });
-    hooks[event] = groups;
-  }
-  settings.hooks = hooks;
-
-  const statusLine = (settings.statusLine ?? { type: "command" }) as HookEntry &
-    Json;
-  // When the status line is already one of ours, the original command is in the file already.
-  if (!isOurTap(statusLine.command)) {
+  const { settings: merged, originalStatusLine } = mergeSettings(settings, {
+    runner: runner(),
+    hookFile: hookFile(),
+    tapFile: tapFile(),
+  });
+  if (originalStatusLine !== undefined) {
     writeFileSync(
       join(hiveDirectory(), "statusline-original.txt"),
-      statusLine.command ?? "",
+      originalStatusLine,
     );
   }
-  statusLine.command = `${command} "${tapFile()}"`;
-  settings.statusLine = statusLine;
 
   mkdirSync(claudeDirectory(), { recursive: true });
-  writeFileSync(settingsFile(), `${JSON.stringify(settings, null, 2)}\n`);
+  writeFileSync(settingsFile(), `${JSON.stringify(merged, null, 2)}\n`);
   return hooksStatus();
 }

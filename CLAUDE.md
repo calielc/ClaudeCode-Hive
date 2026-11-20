@@ -13,7 +13,7 @@ It is the guide for any agent or person who starts new work on Hive. It gives th
 - Never commit or push to `main`. Every change goes through a pull request, as the "Contribute" section of `README.md` says. Do not merge a pull request unless the owner asks.
 - Commit and push only after the owner asks. Commit messages use the form `type: description`. The repository author is the personal address in the local git identity.
 - Documentation and comments use plain English: short sentences, no contractions, no semicolons, no em-dashes, and the condition first. Do not use the modal verbs that the linter bans. Use `can`, `will` and `must`.
-- Write tests for new rules. Do not skip the pre-commit hook with `--no-verify`. If you change the interface, also run `npm run test:e2e`, and add a test there for a new behavior. The e2e tests use their own data folder and do not disturb a running Hive.
+- Write tests for new rules. Do not skip the pre-commit hook with `--no-verify`. If you change the interface, also run the e2e tests, and add a test there for a new behavior. Run them with `npm run test:e2e:docker`, because `npm run test:e2e` opens windows on the desktop of the owner and takes the focus. The e2e tests use their own data folder and do not disturb a running Hive.
 - After a change that you can see in the interface, run `npm run screenshots` and commit the new pictures in `docs/images`. The README has one picture, and `docs/FEATURES.md` has the others. They show demo data only. `docs/TECH-STACK.md`, section 12.4, has the details.
 - Tests use fake terminal commands, not the real `claude` command. `docs/TECH-STACK.md` explains how, in section 12.
 
