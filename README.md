@@ -45,7 +45,7 @@ Plain Shift+Tab goes to Claude Code.
 
 ## Download
 
-The installers for Windows and macOS are on the Releases page of this repository.
+The installers for Windows and macOS are on the Releases page of this repository. A release has them only after the maintainer builds them, so a new release can come without files for a while.
 
 - Windows: run `Hive-<version>-win-x64.exe`. The installer is not signed, so Windows SmartScreen warns about an unknown publisher. Choose "More info", then "Run anyway".
 - macOS: open the `.dmg` for your Mac and drag Hive to Applications. Use `arm64` for Apple Silicon and `x64` for an Intel Mac. The app is not notarized. The first time, open it with a right click and "Open".
@@ -74,7 +74,7 @@ Other commands:
 - `npm run lint` checks the code and the style. `npm run lint:fix` formats the code and applies the safe fixes.
 - `npm run dist` builds an installer for the system you are on. The version is the next release version with a draft mark, for example `2.1.0-draft.3`, so a local file is never mistaken for a release.
 
-Each merge to `main` can make a new version. The commit type decides: `feat` gives a minor version, `fix` and `perf` give a patch version, and `feat!:` or a `BREAKING CHANGE:` line gives a major version. The other types make no release. The release workflow builds the installers and makes a draft release. You publish the draft by hand. Squash merge the pull requests, and give each one a title in the form `type: description`. `docs/TECH-STACK.md`, section 14, describes it.
+Each merge to `main` makes a new release with a version and a tag. The commit type decides the version: `feat` gives a minor version, `feat!:` or a `BREAKING CHANGE:` line gives a major version, and every other type gives a patch version. The release has notes and no installers. The maintainer builds them on demand with the workflow "Installers" (Actions tab, "Run workflow"), which adds them to the release. Squash merge the pull requests, and give each one a title in the form `type: description`. `docs/TECH-STACK.md`, section 14, describes it.
 
 The renderer is React with `xterm.js`. The main process runs the terminals with `node-pty`, reads the session files and sends notifications. Run `npx electron scripts/make-icon.cjs` to draw the icon again.
 
@@ -108,4 +108,4 @@ Set `HIVE_DEBUG=1` to get `window.__hive` in the page. Set `HIVE_PTY_COMMAND` to
 
 ## Windows
 
-The CI runs the automated tests on Windows. The release workflow builds the installer and starts the packaged app once. Terminals use `cmd.exe`, and the session folder names follow the rule Claude Code uses for Windows paths.
+The CI runs the automated tests on Windows. The installer workflow builds the installer and starts the packaged app once. Terminals use `cmd.exe`, and the session folder names follow the rule Claude Code uses for Windows paths.

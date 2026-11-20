@@ -49,7 +49,7 @@ All direct packages had the latest version on 2026-11-18. The `overrides` entry 
 - `scripts/make-icon.cjs`: draws `build/icon.png`. Run it with `npx electron scripts/make-icon.cjs`.
 - `scripts/next-version.ts`, `git-version.ts` and `release-version.ts`: the rules for the version of a release, the reading of git, and the command that the release workflow runs. `scripts/dist.ts` builds a local installer with a draft version. See section 14.
 - `biome.json`, `.editorconfig`, `.gitattributes` and `.husky/pre-commit`: the lint and the style, the line endings and the commit hook. See section 11.1.
-- `.github/`: the workflows `ci.yml`, `audit.yml`, `release.yml` and `pr-title.yml`, and the file `CODEOWNERS`. `renovate.json` in the root configures Renovate. See section 13.
+- `.github/`: the workflows `ci.yml`, `audit.yml`, `release.yml`, `installers.yml` and `pr-title.yml`, and the file `CODEOWNERS`. `renovate.json` in the root configures Renovate. See section 13.
 - `scripts/brand-electron.cjs`: gives the dev `Electron.app` the name and the icon of Hive. `npm run dev` runs it first.
 
 ## 4. Data sources and formats
@@ -188,38 +188,41 @@ The tests in `e2e/` start the built app (`out/main/index.js`) with Playwright an
 
 ## 14. Releases
 
-The workflow `.github/workflows/release.yml` gives each merge to `main` a version, builds the installers and makes a draft release on GitHub. The owner publishes the draft by hand.
+The workflow `.github/workflows/release.yml` gives each merge to `main` a version, a tag and a release on GitHub. The release has notes and no installers. The workflow `.github/workflows/installers.yml` builds the installers when the owner starts it, and adds them to a release.
 
 ### 14.1 Versions
 
 - The version follows Semantic Versioning. The commit types decide it, as in Conventional Commits. A `feat` commit gives a minor version (2.0.0 to 2.1.0). A `fix` or `perf` commit gives a patch version (2.0.0 to 2.0.1). A `!` before the colon, as in `feat!: ...`, or a line that starts with `BREAKING CHANGE:` in the message, gives a major version (2.0.0 to 3.0.0).
-- The types `docs`, `test`, `chore`, `ci`, `build`, `style` and `refactor` make no release. Renovate uses `chore`, so a dependency update makes no release by itself.
-- The job "Choose the version" runs `scripts/release-version.ts`, which reads git through `scripts/git-version.ts`. It finds the highest tag `vX.Y.Z`, reads all commit messages since that tag and takes the biggest change. If there is none, the other jobs are skipped. The rules are in `scripts/next-version.ts`, and `scripts/next-version.test.ts` tests them.
-- The tag is the version. The file `package.json` keeps its old number in the repository, and nothing is committed to `main`. Inside the build, `npm version` sets the new number. The installers and the app itself then report the new version, and the update notice (section 9 of `docs/FEATURES.md`) compares against it.
+- Every other type (`docs`, `test`, `chore`, `ci`, `build`, `style`, `refactor`) gives a patch version, because each merge makes a release. This includes the dependency updates of Renovate, which use `chore`.
+- The job "Choose the version" runs `scripts/release-version.ts`, which reads git through `scripts/git-version.ts`. It finds the highest tag `vX.Y.Z`, reads all commit messages since that tag and takes the biggest change. The rules are in `scripts/next-version.ts`, and `scripts/next-version.test.ts` tests them.
+- The tag is the version. The file `package.json` keeps its old number in the repository, and nothing is committed to `main`. Inside the installer build, `npm version` sets the new number. The installers and the app itself then report the new version, and the update notice (section 9 of `docs/FEATURES.md`) compares against it.
 - The commit message is the title of the pull request when you squash merge. Squash merge the pull requests. The workflow `.github/workflows/pr-title.yml` fails if the title is not `type: description` with a known type. Add that check to the required checks of the ruleset if you want to enforce it.
 
 ### 14.2 The release
 
-- The workflow builds on two runners. The Windows runner makes an NSIS installer (`Hive-<version>-win-x64.exe`). The macOS runner makes a `.dmg` and a `.zip` for Apple Silicon (`arm64`) and for Intel (`x64`).
-- Before the build, each runner runs `npm run typecheck`, `npm run lint` and `npm test`. After the build, it starts the unpacked app and runs `e2e/packaged.e2e.ts`. This test proves that the app starts, that the native module `node-pty` loads from the packaged files and that the app reports the version of the build.
-- The `release` job collects the files and creates a draft release with the title "Hive <version>". The notes list the commits since the last tag, without the `chore`, `ci`, `docs`, `test`, `build` and `style` commits.
-- The tag does not exist while the release is a draft. GitHub makes the tag `v<version>` on the commit of the build when the owner publishes the draft. The next version then counts from this tag.
-- Merges that come before the owner publishes the draft do not make a second version. Each run counts from the last published tag, so it covers all changes that are not published yet. It replaces the old draft. Only a draft with the marker `hive-auto-release` in its notes is replaced. A draft that the owner made by hand stays.
+- The `release` job of `release.yml` runs on each push to `main`. It creates the release "Hive <version>" with the tag `v<version>` on the commit of the push, and marks it as the latest release. The notes list the commits since the last tag, without the `chore`, `ci`, `docs`, `test`, `build` and `style` commits. The release has no installer files. It takes seconds, so each merge can have one.
+- The drafts of the old flow (a draft with installers for each change, with the marker `hive-auto-release` in the notes) are removed by this job. A draft that the owner made by hand stays.
+
+### 14.3 The installers
+
+- The build is costly, so it runs only on demand. In the Actions tab, choose the workflow "Installers" and "Run workflow". Give the tag of a release (for example `v2.2.0`), or leave it empty for the latest release. The workflow checks out the code of that tag, so the installers match the release.
+- The workflow builds on two runners. The Windows runner makes an NSIS installer (`Hive-<version>-win-x64.exe`). The macOS runner makes a `.dmg` and a `.zip` for Apple Silicon (`arm64`) and for Intel (`x64`). `npm version` sets the number of the tag inside the build, so the app reports the version of the release.
+- After the build, each runner starts the unpacked app and runs `e2e/packaged.e2e.ts`. This test proves that the app starts, that the native module `node-pty` loads from the packaged files and that the app reports the version of the build. The tests of the code itself run on each pull request, so the installer build does not repeat them.
+- The `upload` job adds the files to the release. `--clobber` replaces the files of an earlier build of the same release. The files also stay as workflow artifacts for 7 days.
 - A local `npm run dist` does the same version choice, with `scripts/dist.ts`. It builds with the next version and the mark `-draft.<n>`, where n is the number of commits since the last release, for example `Hive-2.1.0-draft.3-win-x64.exe`. It passes the version to electron-builder with `-c.extraMetadata.version`, so `package.json` does not change. A draft is older than the release with the same numbers, so a draft build still shows the update notice when the real release exists. Other arguments go to electron-builder, for example `npm run dist -- --win --dir`. The workflow uses `npm run dist:release`, which builds with the version that `npm version` set.
 - To run the packaged test against a local draft build, set `HIVE_EXPECT_VERSION` to the draft version that `npm run dist` prints, and `HIVE_E2E_PACKAGED` to the unpacked app.
-- A run by hand (`workflow_dispatch`) builds the installers and keeps them as workflow artifacts for 7 days. It makes no release.
-- A tag that the owner pushes by hand starts nothing. The workflow starts only on a push to `main`.
+- A tag that the owner pushes by hand starts nothing. The release workflow starts only on a push to `main`, and the installer workflow only by hand.
 - `electron-builder` does not rebuild `node-pty` (`npmRebuild` is `false`), because the package has prebuilt binaries for all systems. A rebuild needs a C++ toolchain, and it fails on a plain Windows machine.
 - The installers are not signed with a trusted certificate. Windows SmartScreen warns about an unknown publisher. On macOS, the hook `scripts/ad-hoc-sign.cjs` gives the app an ad hoc signature, because Apple Silicon reports an unsigned app as damaged. The app is not notarized, so the user must open it once with a right click and "Open".
 - To sign the installers later, add the certificate as repository secrets and set the `CSC_LINK` and `CSC_KEY_PASSWORD` variables in the build step. The hook then does nothing on macOS. Notarization needs more settings.
-- The app does not update itself. An installed app checks the public list of releases of this repository (`https://api.github.com/repos/calielc/ClaudeCode-Hive/releases/latest`) 15 seconds after the start and every 4 hours. The call needs no token. GitHub allows 60 calls an hour for each address, which is far more than this needs. A failed check tries again after one minute, up to three times in a row. If the latest release has a higher version than `app.getVersion()`, the top bar shows a notice with a link to the page of the release. The check skips drafts and pre-releases, so a release is visible only after the owner publishes the draft.
+- The app does not update itself. An installed app checks the public list of releases of this repository (`https://api.github.com/repos/calielc/ClaudeCode-Hive/releases/latest`) 15 seconds after the start and every 4 hours. The call needs no token. GitHub allows 60 calls an hour for each address, which is far more than this needs. A failed check tries again after one minute, up to three times in a row. If the latest release has a higher version than `app.getVersion()`, the top bar shows a notice with a link to the page of the release. The check skips drafts and pre-releases. A release counts as soon as it exists, also when it has no installers yet, so the notice can show a version whose installers are not built. The page of the release then says how to build them.
 - A real self-update needs `electron-updater`. On macOS it also needs a Developer ID signature, which the app does not have. See the signing note above.
 
 ## 15. Decisions and why
 
 - Husky for the pre-commit hook. It is the common tool, and `.husky/pre-commit` is a plain file in the repository. Biome checks the staged files itself with `--staged`, so lint-staged is not needed.
 - Changes go through pull requests and are squash merged. The title of the pull request is the commit message, and its type chooses the version. This gives one commit for each change and a version rule that needs no extra file.
-- The owner publishes each release by hand. The workflow only makes the draft, so a person reads the notes and the files before they are public.
+- Each merge makes a release (trunk-based), and the installers are built on demand. The build costs a Windows and a macOS runner, and most merges do not need it. The owner starts the build for the releases that users should get.
 - The version lives in the tag and not in `package.json`. A bot must not commit to a protected `main`, so the build sets the number for itself.
 - The app shows a notice for a new release and does not update itself. A self-update needs a signed macOS app, and none exists yet.
 - The MIT license. It is short, common and permissive, and the OSI approves it, which the free signing program SignPath Foundation needs. The main dependencies (Electron, React, xterm.js, node-pty) are MIT or similar, so they do not limit the choice. The file `LICENSE` has the text, and `package.json` has the `license` field. The installers must carry the licenses of the bundled packages. Electron adds its own. A generated notices file for the other packages is not made yet.

@@ -1,15 +1,12 @@
 name: Release
 
-# Each push to main (a merged pull request) can make a new version. The commit types decide:
-# feat gives a minor version, fix and perf give a patch version, and a "!" or a BREAKING CHANGE line gives a major version.
-# Other types (docs, test, chore, ci) make no release.
-# The workflow builds the installers and makes a DRAFT release. The owner publishes the draft by hand.
-# The tag does not exist until the owner publishes the draft.
+# Each push to main (a merged pull request) makes a release with a new version and a tag. The commit types decide:
+# feat gives a minor version, a "!" or a BREAKING CHANGE line gives a major version, and every other type gives a patch version.
+# The release has notes and no installers, because the installer build is costly.
+# The owner builds the installers when needed: run the workflow "Installers" (installers.yml).
 on:
   push:
     branches: [main]
-  # A manual run builds the installers and keeps them as workflow artifacts for 7 days. It makes no release.
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -38,78 +35,10 @@ jobs:
       - id: next
         run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/release-version.ts
 
-  build:
-    name: Build (${{ matrix.name }})
-    needs: version
-    if: needs.version.outputs.release == 'true' || github.event_name == 'workflow_dispatch'
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - name: Windows
-            os: windows-latest
-            builder-args: --win
-            # The path of the unpacked app, for the smoke test.
-            packaged: dist/win-unpacked/Hive.exe
-          - name: macOS
-            os: macos-latest
-            builder-args: --mac --arm64 --x64
-            packaged: dist/mac-arm64/Hive.app/Contents/MacOS/Hive
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 26
-          cache: npm
-
-      - run: npm ci
-
-      - run: npm run typecheck
-      - run: npm run lint
-      - run: npm test
-
-      # The tag is the version. The file package.json keeps its old number in the repository.
-      # Inside this build, the number is set, so the installers and the app itself report the new version.
-      - name: Set the version
-        if: needs.version.outputs.release == 'true'
-        shell: bash
-        env:
-          VERSION: ${{ needs.version.outputs.version }}
-        run: npm version "${VERSION}" --no-git-tag-version --allow-same-version
-
-      # No certificate is configured. Windows skips the signing. The hook scripts/ad-hoc-sign.cjs signs the Mac app ad hoc.
-      - name: Build the installers
-        run: npm run dist:release -- ${{ matrix.builder-args }} --publish never
-
-      - name: Show the signature of the Mac app
-        if: runner.os == 'macOS'
-        run: |
-          codesign --display --verbose=2 dist/mac-arm64/Hive.app
-          codesign --verify --deep --strict --verbose=2 dist/mac-arm64/Hive.app
-
-      # Start the unpacked app. This proves that the native terminal module loads from the packaged files.
-      - name: Smoke test the packaged app
-        shell: bash
-        env:
-          HIVE_E2E_PACKAGED: ${{ github.workspace }}/${{ matrix.packaged }}
-        run: npx tsx --test e2e/packaged.e2e.ts
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: installers-${{ matrix.name }}
-          path: |
-            dist/Hive-*.exe
-            dist/Hive-*.dmg
-            dist/Hive-*.zip
-          if-no-files-found: error
-          retention-days: 7
-
   release:
-    name: Make the draft release
-    if: github.event_name == 'push' && needs.version.outputs.release == 'true'
-    needs: [version, build]
+    name: Make the release
+    if: needs.version.outputs.release == 'true'
+    needs: version
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -121,17 +50,11 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v8
-        with:
-          path: installers
-          merge-multiple: true
 
       - name: Write the release notes
         run: |
           range="${PREVIOUS:+${PREVIOUS}..}HEAD"
           {
-            # The marker tells the next run that it can replace this draft.
-            echo "<!-- hive-auto-release -->"
             echo "## Changes"
             echo
             changes="$(git log --no-merges --pretty='- %s' "${range}" | grep -v -E '^- (chore|ci|docs|test|build|style)(\(.*\))?:' || true)"
@@ -139,13 +62,12 @@ jobs:
             echo
             echo "## Install"
             echo
-            echo "- **Windows:** run the file ending in \`win-x64.exe\`. Windows SmartScreen warns about an unknown publisher, because the installer is not signed. Choose \"More info\", then \"Run anyway\"."
-            echo "- **macOS:** open the \`.dmg\` for your Mac and drag Hive to Applications. Use \`arm64\` for Apple Silicon and \`x64\` for an Intel Mac. The app is not notarized. The first time, open it with a right click and \"Open\"."
+            echo "This release has no installers until someone builds them. To build them, run the workflow \"Installers\" in the Actions tab and give it the tag \`v${VERSION}\`. The files then appear under this release. Windows and macOS builds are not signed, so the first start shows a warning."
           } > notes.md
           cat notes.md
 
-      # An earlier run can have left a draft for changes that are not published yet. This run covers those changes too,
-      # so the old draft goes. Only a draft with the marker goes. A draft that the owner made by hand stays.
+      # The drafts of the old flow (a draft for each change, with installers) are not needed any more.
+      # Only a draft with the marker goes. A draft that the owner made by hand stays.
       - name: Remove the old automatic drafts
         run: |
           gh api --paginate "repos/${GITHUB_REPOSITORY}/releases" \
@@ -155,12 +77,11 @@ jobs:
               gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${id}"
             done
 
-      # The release is a draft. The owner reads the notes and the files, and then publishes it.
-      # GitHub makes the tag v<version> on the commit of this run when the owner publishes the draft.
-      - name: Create the draft release
+      # GitHub makes the tag v<version> on the commit of this run.
+      - name: Create the release
         run: |
-          gh release create "v${VERSION}" installers/* \
-            --draft \
+          gh release create "v${VERSION}" \
             --target "${GITHUB_SHA}" \
             --title "Hive ${VERSION}" \
-            --notes-file notes.md
+            --notes-file notes.md \
+            --latest

@@ -12,7 +12,7 @@ export interface Commit {
   body: string;
 }
 
-/** The commit types that Hive accepts. Only some of them make a release. */
+/** The commit types that Hive accepts. The type chooses the size of the version step. */
 export const TYPES = [
   "feat",
   "fix",
@@ -55,19 +55,18 @@ function rank(bump: Bump): number {
 /**
  * The biggest change in a list of commits.
  * A `!` or a `BREAKING CHANGE:` line gives major, `feat` gives minor, and `fix` or `perf` gives patch.
- * The other types (docs, test, chore, ci and so on) make no release.
+ * Every other change (docs, test, chore, ci and so on) gives patch, because each merge makes a release.
+ * Only an empty list gives none.
  */
 export function bumpFor(commits: Commit[]): Bump {
   let result: Bump = "none";
   for (const commit of commits) {
     const parsed = parseSubject(commit.subject);
-    let bump: Bump = "none";
+    let bump: Bump = "patch";
     if (parsed?.breaking || /^BREAKING[ -]CHANGE:/m.test(commit.body)) {
       bump = "major";
     } else if (parsed?.type === "feat") {
       bump = "minor";
-    } else if (parsed?.type === "fix" || parsed?.type === "perf") {
-      bump = "patch";
     }
     if (rank(bump) > rank(result)) {
       result = bump;
