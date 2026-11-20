@@ -33,7 +33,7 @@ All direct packages had the latest version on 2026-11-18. The `overrides` entry 
 - `src/main/search.ts`, `search.worker.ts`, `search-core.ts`, `fold-search.ts`: full text search in a worker thread.
 - `src/main/pty.ts`: the Claude processes, the output buffer and the batching.
 - `src/main/status.ts`: watches the status files and reads the usage.
-- `src/main/hooks.ts` with `scripts/hook.cjs` and `scripts/statusline-tap.cjs`: the hook installer and the two scripts that it installs.
+- `src/main/hooks.ts` and `hooks-settings.ts` with `scripts/hook.cjs` and `scripts/statusline-tap.cjs`: the hook installer and the two scripts that it installs.
 - `src/main/external-url.ts`: the links that can open outside the app.
 - `src/main/update-check.ts`: the check for a newer release. It compares versions, reads the answer of the GitHub API and runs the timer.
 - `src/renderer/panes.ts`: the pure placement logic of `docs/FEATURES.md`, section 4.
@@ -117,7 +117,7 @@ The scripts run with the real `node` that the login shell finds. Without Node, t
 - A new install of Electron resets this change. The next `npm run dev` sets it again.
 - After the start, the interface reloads hot. If you change a file with the app state, the page reloads and the tabs come back.
 - `npm run dev:watch` also restarts the whole app after a change in the main process. A restart ends all terminals. Do not use it for Hive inside Hive.
-- `npm test` runs 62 unit tests. They cover the placement rules, the tab reorder, the saved session, formatting, the scanner, the search, the paths, the link rules, the agent transcripts, the update check and the version rules of the releases.
+- `npm test` runs 84 unit tests. They cover the placement rules, the tab reorder, the saved session, formatting, the scanner, the search, the paths, the link rules, the agent transcripts and the agent list, the status and usage files, the merge of the hook settings, the update check, and the version rules of the releases (also against a real git repository).
 - `npm run test:e2e` builds the app and runs the end-to-end tests. They start the real app, so they need a screen. See section 12.3.
 - `npm run typecheck`, `npm run lint`, `npm run build` and `npm run dist` (an installer for the current system, with a draft version, see section 14.1) are also available. `npm run lint:fix` formats the code and applies the safe fixes.
 - The installers are not signed with a trusted certificate, because none exists. Section 14 has the details. On macOS, open the app with a right click and "Open".
@@ -151,7 +151,8 @@ The scripts run with the real `node` that the login shell finds. Without Node, t
 - After a new selection, the app moves the keyboard to the terminal at 0, 80 and 300 ms. A test that moves the focus itself must call `settleFocus()` from `e2e/app.ts` first. A text field in use keeps the focus.
 - An app that is not installed reports the version of Electron, and on Linux it reports "0.0". Do not rely on `app.getVersion()` in a test. Use `HIVE_UPDATE_CURRENT_VERSION`.
 - Run a test that fails now and then 10 or 20 times in a loop before you call it fixed. `Emulation.setCPUThrottlingRate` of the Chrome DevTools protocol slows the page and makes a race show.
-- To run the Linux jobs of the CI on a Windows or macOS machine, use Docker. Start a container from `node:24-bookworm`. Copy the sources into it without `node_modules`, `out` and `dist`. Install the system libraries of Electron (`xvfb`, `libgtk-3-0`, `libnss3`, `libgbm1`, `libasound2` and a few more) with `apt-get`, run `npm ci`, and then run `xvfb-run --auto-servernum npm run test:e2e` with `SHELL=/bin/bash`. This found a fault that only Linux showed.
+- `npm run test:e2e:docker` runs the end-to-end tests in a container, on a virtual screen (`scripts/e2e-docker.ts`, `e2e/docker/Dockerfile` and `e2e/docker/run.sh`). The window of the app never opens on your desktop, so the run does not take the focus from your work. It copies the sources into the container without `node_modules`, installs the packages there (with an npm cache volume) and runs `xvfb-run npm run test:e2e`. The image uses Node 26, like the CI.
+- To run the Linux jobs of the CI on a Windows or macOS machine by hand, use Docker. Start a container from `node:24-bookworm`. Copy the sources into it without `node_modules`, `out` and `dist`. Install the system libraries of Electron (`xvfb`, `libgtk-3-0`, `libnss3`, `libgbm1`, `libasound2` and a few more) with `apt-get`, run `npm ci`, and then run `xvfb-run --auto-servernum npm run test:e2e` with `SHELL=/bin/bash`. This found a fault that only Linux showed.
 
 ### 12.3 End-to-end tests
 

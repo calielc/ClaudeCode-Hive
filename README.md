@@ -50,7 +50,8 @@ The installers for Windows and macOS are on the Releases page of this repository
 Other commands:
 
 - `npm test` runs the unit tests.
-- `npm run test:e2e` starts the real app and runs the end-to-end tests.
+- `npm run test:e2e` starts the real app and runs the end-to-end tests. The app windows open on your screen and take the focus.
+- `npm run test:e2e:docker` runs the same tests in a Docker container on a virtual screen, so nothing opens on your desktop. The first run builds the image and takes a few minutes.
 - `npm run typecheck` checks the types.
 - `npm run lint` checks the code and the style. `npm run lint:fix` formats the code and applies the safe fixes.
 - `npm run dist` builds an installer for the system you are on. The version is the next release version with a draft mark, for example `2.1.0-draft.3`, so a local file is never mistaken for a release.
