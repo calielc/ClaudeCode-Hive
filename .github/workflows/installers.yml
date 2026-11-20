@@ -1,0 +1,123 @@
+name: Installers
+
+# The installer build is costly (a Windows and a macOS runner), so it runs only when the owner starts it.
+# It builds the installers of one release and adds the files to that release.
+# Start it in the Actions tab with "Run workflow", and give the tag of the release, for example v2.2.0.
+# Leave the tag empty to build the latest release.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag of the release, for example v2.2.0. Empty means the latest release.
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  tag:
+    name: Find the release
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.find.outputs.tag }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      INPUT_TAG: ${{ inputs.tag }}
+    steps:
+      - id: find
+        run: |
+          tag="${INPUT_TAG}"
+          if [ -z "${tag}" ]; then
+            tag="$(gh release view --repo "${GITHUB_REPOSITORY}" --json tagName --jq .tagName)"
+          fi
+          # The release must exist, and the tag must have the form of a version.
+          gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" > /dev/null
+          if ! [[ "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "The tag ${tag} is not a version tag." >&2
+            exit 1
+          fi
+          echo "Build the installers of ${tag}."
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+
+  build:
+    name: Build (${{ matrix.name }})
+    needs: tag
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+            builder-args: --win
+            # The path of the unpacked app, for the smoke test.
+            packaged: dist/win-unpacked/Hive.exe
+          - name: macOS
+            os: macos-latest
+            builder-args: --mac --arm64 --x64
+            packaged: dist/mac-arm64/Hive.app/Contents/MacOS/Hive
+    steps:
+      # The code of the release, not the code of main.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.tag.outputs.tag }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+
+      - run: npm ci
+
+      # The tag is the version. The file package.json keeps its old number in the repository.
+      # Inside this build, the number is set, so the installers and the app itself report the new version.
+      - name: Set the version
+        shell: bash
+        env:
+          TAG: ${{ needs.tag.outputs.tag }}
+        run: npm version "${TAG#v}" --no-git-tag-version --allow-same-version
+
+      # No certificate is configured. Windows skips the signing. The hook scripts/ad-hoc-sign.cjs signs the Mac app ad hoc.
+      - name: Build the installers
+        run: npm run dist:release -- ${{ matrix.builder-args }} --publish never
+
+      - name: Show the signature of the Mac app
+        if: runner.os == 'macOS'
+        run: |
+          codesign --display --verbose=2 dist/mac-arm64/Hive.app
+          codesign --verify --deep --strict --verbose=2 dist/mac-arm64/Hive.app
+
+      # Start the unpacked app. This proves that the native terminal module loads from the packaged files.
+      - name: Smoke test the packaged app
+        shell: bash
+        env:
+          HIVE_E2E_PACKAGED: ${{ github.workspace }}/${{ matrix.packaged }}
+        run: npx tsx --test e2e/packaged.e2e.ts
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: installers-${{ matrix.name }}
+          path: |
+            dist/Hive-*.exe
+            dist/Hive-*.dmg
+            dist/Hive-*.zip
+          if-no-files-found: error
+          retention-days: 7
+
+  upload:
+    name: Add the files to the release
+    needs: [tag, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ needs.tag.outputs.tag }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: installers
+          merge-multiple: true
+      # --clobber replaces the files of an earlier build of the same release.
+      - run: gh release upload "${TAG}" installers/* --clobber --repo "${GITHUB_REPOSITORY}"

@@ -35,7 +35,7 @@ test("a subject gives its type and the breaking mark", () => {
   assert.equal(parseSubject("feat:"), undefined);
 });
 
-test("feat gives minor, fix and perf give patch, and the other types give nothing", () => {
+test("feat gives minor, and every other type gives patch", () => {
   assert.equal(bumpFor([commit("feat: a")]), "minor");
   assert.equal(bumpFor([commit("fix: a")]), "patch");
   assert.equal(bumpFor([commit("perf: a")]), "patch");
@@ -48,10 +48,11 @@ test("feat gives minor, fix and perf give patch, and the other types give nothin
     "style",
     "refactor",
   ]) {
-    assert.equal(bumpFor([commit(`${type}: a`)]), "none", type);
+    assert.equal(bumpFor([commit(`${type}: a`)]), "patch", type);
   }
+  // No commit at all makes no release. A message in no known form still counts as a change.
   assert.equal(bumpFor([]), "none");
-  assert.equal(bumpFor([commit("update things")]), "none");
+  assert.equal(bumpFor([commit("update things")]), "patch");
 });
 
 test("the biggest change wins", () => {
@@ -59,7 +60,7 @@ test("the biggest change wins", () => {
     bumpFor([commit("fix: a"), commit("feat: b"), commit("docs: c")]),
     "minor",
   );
-  assert.equal(bumpFor([commit("chore: a"), commit("fix: b")]), "patch");
+  assert.equal(bumpFor([commit("chore: a"), commit("docs: b")]), "patch");
   assert.equal(bumpFor([commit("feat: a"), commit("fix!: b")]), "major");
 });
 

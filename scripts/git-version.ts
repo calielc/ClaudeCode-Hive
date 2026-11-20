@@ -18,7 +18,7 @@ export interface NextRelease {
   /** The version of the last release, without the `v`. Without a tag, it is the version in package.json. */
   base: string;
   bump: Bump;
-  /** The next version. Empty when the commits since the last release make no release. */
+  /** The next version. Empty when there is no commit since the last release. */
   version: string;
   /** The number of commits since the last release. */
   commits: number;
