@@ -4,7 +4,13 @@ name: Installers
 # It builds the installers of one release and adds the files to that release.
 # Start it in the Actions tab with "Run workflow", and give the tag of the release, for example v2.2.0.
 # Leave the tag empty to build the latest release.
+# A major release (see release.yml) starts this workflow by itself.
 on:
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
   workflow_dispatch:
     inputs:
       tag:
