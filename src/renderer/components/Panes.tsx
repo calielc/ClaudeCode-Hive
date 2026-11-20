@@ -53,15 +53,17 @@ export function TopBar() {
           <path d="M5 1v10" />
         </svg>
       </button>
+      <TabBar />
       <button
         type="button"
         className="new-session"
         onClick={newSession}
         title="New session in the selected folder"
+        {...endOfListProps()}
       >
         + New Session
       </button>
-      <TabBar />
+      <div className="topbar-fill" {...endOfListProps()} />
       <UpdateNotice />
       <div className="layouts">
         {LAYOUTS.map((item) => (

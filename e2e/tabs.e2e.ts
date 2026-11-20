@@ -181,3 +181,54 @@ describe("sessions, tabs and panes", () => {
     });
   });
 });
+
+describe("the tab bar with many tabs", () => {
+  let hive: Hive;
+
+  before(async () => {
+    hive = await launchHive();
+  });
+  after(async () => {
+    await hive.close();
+  });
+
+  test("keeps the New Session button after the last tab, also when the tabs overflow", async () => {
+    const { page } = hive;
+    const boxOf = async (selector: string) => {
+      const box = await page.locator(selector).first().boundingBox();
+      assert.ok(box, `${selector} is not on the screen`);
+      return box;
+    };
+    await page.locator(".new-session").click();
+    await eventually(async () =>
+      assert.ok((await page.locator(".tabs .tab").count()) >= 1),
+    );
+    const last = await page.locator(".tabs .tab").last().boundingBox();
+    const button = await boxOf(".new-session");
+    assert.ok(last, "no tab");
+    assert.ok(
+      button.x >= last.x + last.width - 1,
+      `the button (${button.x}) must come after the last tab (ends at ${last.x + last.width})`,
+    );
+
+    // Many new sessions overflow the bar. The button stays inside the bar, left of the layout buttons.
+    for (let i = 0; i < 14; i++) {
+      await page.keyboard.press(`${modifier}+N`);
+    }
+    await eventually(async () =>
+      assert.ok((await page.locator(".tabs .tab").count()) >= 15),
+    );
+    const layouts = await boxOf(".layouts");
+    const pinned = await boxOf(".new-session");
+    assert.ok(pinned.x >= 0, "the button is out of the window on the left");
+    assert.ok(
+      pinned.x + pinned.width <= layouts.x + 1,
+      "the button overlaps the layout buttons or is pushed out of the bar",
+    );
+    const tabs = await boxOf(".tabs");
+    assert.ok(
+      pinned.x >= tabs.x + tabs.width - 1,
+      "the button must come after the tabs, not inside their scroll area",
+    );
+  });
+});
