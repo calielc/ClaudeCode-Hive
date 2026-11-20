@@ -188,7 +188,7 @@ The tests in `e2e/` start the built app (`out/main/index.js`) with Playwright an
 
 ## 14. Releases
 
-The workflow `.github/workflows/release.yml` gives each merge to `main` a version, a tag and a release on GitHub. The release has notes and no installers. The workflow `.github/workflows/installers.yml` builds the installers when the owner starts it, and adds them to a release.
+The workflow `.github/workflows/release.yml` gives each merge to `main` a version, a tag and a release on GitHub. The release has notes and no installers, except a major release. The workflow `.github/workflows/installers.yml` builds the installers and adds them to a release. It starts by itself for a major release, and by hand for any other.
 
 ### 14.1 Versions
 
@@ -205,7 +205,7 @@ The workflow `.github/workflows/release.yml` gives each merge to `main` a versio
 
 ### 14.3 The installers
 
-- The build is costly, so it runs only on demand. In the Actions tab, choose the workflow "Installers" and "Run workflow". Give the tag of a release (for example `v2.2.0`), or leave it empty for the latest release. The workflow checks out the code of that tag, so the installers match the release.
+- The build is costly, so it runs by itself only for a major release. The `installers` job of `release.yml` calls it with the new tag after the release exists. For any other release it runs on demand. In the Actions tab, choose the workflow "Installers" and "Run workflow". Give the tag of a release (for example `v2.2.0`), or leave it empty for the latest release. The workflow checks out the code of that tag, so the installers match the release.
 - The workflow builds on two runners. The Windows runner makes an NSIS installer (`Hive-<version>-win-x64.exe`). The macOS runner makes a `.dmg` and a `.zip` for Apple Silicon (`arm64`) and for Intel (`x64`). `npm version` sets the number of the tag inside the build, so the app reports the version of the release.
 - After the build, each runner starts the unpacked app and runs `e2e/packaged.e2e.ts`. This test proves that the app starts, that the native module `node-pty` loads from the packaged files and that the app reports the version of the build. The tests of the code itself run on each pull request, so the installer build does not repeat them.
 - The `upload` job adds the files to the release. `--clobber` replaces the files of an earlier build of the same release. The files also stay as workflow artifacts for 7 days.
@@ -222,7 +222,7 @@ The workflow `.github/workflows/release.yml` gives each merge to `main` a versio
 
 - Husky for the pre-commit hook. It is the common tool, and `.husky/pre-commit` is a plain file in the repository. Biome checks the staged files itself with `--staged`, so lint-staged is not needed.
 - Changes go through pull requests and are squash merged. The title of the pull request is the commit message, and its type chooses the version. This gives one commit for each change and a version rule that needs no extra file.
-- Each merge makes a release (trunk-based), and the installers are built on demand. The build costs a Windows and a macOS runner, and most merges do not need it. The owner starts the build for the releases that users should get.
+- Each merge makes a release (trunk-based), and the installers are built only for a major release or on demand. The build costs a Windows and a macOS runner, and most merges do not need it. A major release is one that users must get, so it is built at once. The owner starts the build for any other release that users should get.
 - The version lives in the tag and not in `package.json`. A bot must not commit to a protected `main`, so the build sets the number for itself.
 - The app shows a notice for a new release and does not update itself. A self-update needs a signed macOS app, and none exists yet.
 - The MIT license. It is short, common and permissive, and the OSI approves it, which the free signing program SignPath Foundation needs. The main dependencies (Electron, React, xterm.js, node-pty) are MIT or similar, so they do not limit the choice. The file `LICENSE` has the text, and `package.json` has the `license` field. The installers must carry the licenses of the bundled packages. Electron adds its own. A generated notices file for the other packages is not made yet.
