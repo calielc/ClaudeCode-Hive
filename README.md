@@ -10,7 +10,7 @@ This is the Electron version. The earlier native macOS version in Swift is kept 
 
 ## Features
 
-Hive shows all your sessions with their live status, searches the conversations, puts up to four terminals side by side, can move a session to its own window, and sends a notification when a session needs you. `docs/FEATURES.md` describes every feature, the keys and the placement rules, with pictures.
+Hive shows all your sessions with their live status, searches the conversations, puts up to sixteen terminals side by side, can move a session to its own window, and sends a notification when a session needs you. `docs/FEATURES.md` describes every feature, the keys and the placement rules, with pictures.
 
 ## License
 

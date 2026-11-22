@@ -43,7 +43,8 @@ With the left panel hidden, the panes use the full width. The picture shows four
 Four sessions in the grid layout. The blue ring marks the selected pane.
 
 - **Real terminals.** Each session runs `claude` in a pseudo terminal. A new session runs `claude --session-id <id>`. An old session runs `claude --resume <id>`. The login shell of the user runs the command. Because of this, a shell function with the name `claude` works.
-- **Layouts.** The layouts are single, side by side, stacked, and a 2 by 2 grid. The buttons are at the top right. Hive saves the layout. You can drag the dividers between panes. Hive saves their positions.
+- **Layouts.** The layouts are single, 1×2 (side by side), 2×1 (stacked), 2×2, 3×3 and 4×4. A button at the top right shows the current layout as a small picture. A click opens a list of pictures, and each one has a tooltip with its name. Hive saves the layout. You can drag the dividers between panes in the layouts up to 2×2. Hive saves their positions. The 3×3 and 4×4 layouts have equal panes.
+- **Waiting pulse.** In every layout except single, the border of a pane pulses red while its session waits for you.
 - **Selected pane.** A blue ring marks the selected pane. It gets the next session that you pick. A click in a pane selects it.
 - **Tab bar.** Each tab shows the pane number in a split layout, the state dot, the name, a button to undock, and a close button. A window icon marks an undocked tab. The bar scrolls sideways only when the tabs do not fit. Its scroll stops at the ends. The selected tab scrolls into view.
 - **New session.** The "New Session" button starts a session in the selected folder. It sits right after the last tab, because a new session opens as the last tab. When the tabs do not fit, they scroll and the button stays in view. The keys for this are in section 10.

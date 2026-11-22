@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   activate,
   addTab,
+  CAPACITY,
   cycle,
   detach,
   dockBack,
@@ -25,7 +26,8 @@ function withTabs(layout: PaneState["layout"], ...ids: string[]): PaneState {
   return ids.length > 0 ? activate(state, ids[0] as string) : state;
 }
 
-const visible = (state: PaneState): (string | null)[] => state.slots;
+const visible = (state: PaneState): (string | null)[] =>
+  state.slots.slice(0, CAPACITY[state.layout]);
 
 test("first tab fills the single pane", () => {
   const state = withTabs("single", "a");
@@ -172,4 +174,15 @@ test("Ctrl+Tab follows the new order", () => {
   assert.deepEqual(state.tabIds, ["c", "a", "b"]);
   assert.equal(cycle(activate(state, "a"), false), "b");
   assert.equal(cycle(activate(state, "c"), true), "b");
+});
+
+test("the 3x3 and 4x4 layouts hold 9 and 16 panes and fill them in tab order", () => {
+  const ids = Array.from({ length: 12 }, (_, index) => `t${index}`);
+  const nine = setLayout(withTabs("single", ...ids), "grid3");
+  assert.deepEqual(visible(nine), ids.slice(0, 9));
+  const sixteen = setLayout(nine, "grid4");
+  assert.deepEqual(visible(sixteen), [...ids, null, null, null, null]);
+  const back = setLayout(selectPane(sixteen, 11), "grid");
+  assert.equal(visible(back).length, 4);
+  assert.equal(back.activePane, 0);
 });

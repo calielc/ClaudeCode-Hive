@@ -28,7 +28,7 @@ describe("sessions, tabs and panes", () => {
 
     const state = await hive.state();
     assert.equal(state.selectedTabId, IDS.login);
-    // The state keeps four slots for the largest layout. The empty ones are null.
+    // The state keeps 16 slots for the largest layout. The empty ones are null.
     assert.deepEqual(state.slots.slice(0, 1), [IDS.login]);
     await eventually(async () =>
       assert.match(await hive.terminalText(IDS.login), /HIVE-E2E-READY/),
@@ -99,7 +99,10 @@ describe("sessions, tabs and panes", () => {
 
   test("puts both sessions side by side", async () => {
     const { page } = hive;
-    await page.locator('.layouts button[title="Side by side"]').click();
+    await page.locator(".layouts .layout-current").click();
+    await page
+      .locator('.layout-menu button[title="Side by side (1×2)"]')
+      .click();
     await eventually(async () =>
       assert.equal(await page.locator(".pane").count(), 2),
     );
@@ -117,11 +120,31 @@ describe("sessions, tabs and panes", () => {
     await eventually(async () =>
       assert.equal(await page.locator(".pane.active").count(), 1),
     );
-    await page.locator('.layouts button[title="Single pane"]').click();
+    await page.locator(".layouts .layout-current").click();
+    await page.locator('.layout-menu button[title="Single pane"]').click();
     await eventually(async () =>
       assert.equal(await page.locator(".pane").count(), 1),
     );
     assert.equal((await hive.state()).layout, "single");
+  });
+
+  test("the layout menu has 3x3 and 4x4, and goes back to a single pane", async () => {
+    const { page } = hive;
+    await page.locator(".layouts .layout-current").click();
+    await page.locator('.layout-menu button[title="Grid (3×3)"]').click();
+    await eventually(async () =>
+      assert.equal(await page.locator(".pane").count(), 9),
+    );
+    await page.locator(".layouts .layout-current").click();
+    await page.locator('.layout-menu button[title="Grid (4×4)"]').click();
+    await eventually(async () =>
+      assert.equal(await page.locator(".pane").count(), 16),
+    );
+    await page.locator(".layouts .layout-current").click();
+    await page.locator('.layout-menu button[title="Single pane"]').click();
+    await eventually(async () =>
+      assert.equal(await page.locator(".pane").count(), 1),
+    );
   });
 
   test("starts a new session with the button and with the keyboard", async () => {

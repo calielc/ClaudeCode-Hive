@@ -667,22 +667,55 @@ button {
 }
 
 .layouts {
-  display: flex;
+  position: relative;
   flex: none;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
 }
 
 .layouts button {
-  padding: 3px 9px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
   background: var(--bg);
-  border: 0;
-  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
 }
 
-.layouts button.active {
+.layouts svg {
+  fill: var(--muted);
+}
+
+.layouts button:hover svg,
+.layouts button.active svg {
+  fill: var(--text);
+}
+
+.layouts .caret {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.layout-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+.layout-menu button.active {
   background: var(--accent);
+  border-color: var(--accent);
+}
+
+.layout-menu button.active svg {
+  fill: #fff;
 }
 
 .no-session {
@@ -738,6 +771,32 @@ button {
 
 .pane.state-waiting {
   border-color: rgba(235, 77, 77, 0.45);
+}
+
+/* A waiting pane in a split layout pulses red, so it stands out among many panes. */
+.pane.alert {
+  animation: alert-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes alert-pulse {
+  0%,
+  100% {
+    border-color: rgba(235, 77, 77, 0.45);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+  }
+  50% {
+    border-color: rgb(235, 77, 77);
+    box-shadow:
+      0 0 0 2px rgba(235, 77, 77, 0.7),
+      0 0 14px rgba(235, 77, 77, 0.6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pane.alert {
+    animation: none;
+    border-color: rgb(235, 77, 77);
+  }
 }
 
 /* The selected pane gets an outer ring. The border keeps the colour of the tag or the state. */

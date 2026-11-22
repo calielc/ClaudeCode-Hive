@@ -2,8 +2,10 @@ import {
   type DragEvent,
   type MouseEvent,
   type PointerEvent,
+  useEffect,
   useLayoutEffect,
   useRef,
+  useState,
 } from "react";
 import {
   activateTab,
@@ -26,15 +28,118 @@ import { AgentTranscript } from "./AgentView";
 import { pressable } from "./a11y";
 import { endOfListProps, reorderProps } from "./reorder";
 
-const LAYOUTS: { mode: LayoutMode; title: string; icon: string }[] = [
-  { mode: "single", title: "Single pane", icon: "▢" },
-  { mode: "sideBySide", title: "Side by side", icon: "◫" },
-  { mode: "stacked", title: "Stacked", icon: "⬒" },
-  { mode: "grid", title: "Grid (2×2)", icon: "▦" },
+/** The rows and columns of each layout. The tooltip reads rows by columns. */
+const LAYOUTS: {
+  mode: LayoutMode;
+  title: string;
+  rows: number;
+  columns: number;
+}[] = [
+  { mode: "single", title: "Single pane", rows: 1, columns: 1 },
+  { mode: "sideBySide", title: "Side by side (1×2)", rows: 1, columns: 2 },
+  { mode: "stacked", title: "Stacked (2×1)", rows: 2, columns: 1 },
+  { mode: "grid", title: "Grid (2×2)", rows: 2, columns: 2 },
+  { mode: "grid3", title: "Grid (3×3)", rows: 3, columns: 3 },
+  { mode: "grid4", title: "Grid (4×4)", rows: 4, columns: 4 },
 ];
 
-export function TopBar() {
+/** A small picture of a layout: one box for each pane. */
+function LayoutIcon({ rows, columns }: { rows: number; columns: number }) {
+  const gap = 1.5;
+  const width = (14 - (columns - 1) * gap) / columns;
+  const height = (14 - (rows - 1) * gap) / rows;
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+      {Array.from({ length: rows * columns }, (_, index) => (
+        <rect
+          // biome-ignore lint/suspicious/noArrayIndexKey: The boxes are fixed positions and never reorder.
+          key={index}
+          x={1 + (index % columns) * (width + gap)}
+          y={1 + Math.floor(index / columns) * (height + gap)}
+          width={width}
+          height={height}
+          rx="0.8"
+        />
+      ))}
+    </svg>
+  );
+}
+
+/** The layout button shows the current layout as a picture. A click opens a list of pictures, each with a tooltip. */
+function LayoutMenu() {
   const layout = useStore((state) => state.layout);
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+    const outside = (event: globalThis.PointerEvent): void => {
+      if (!root.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const onEscape = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", onEscape);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("keydown", onEscape);
+    };
+  }, [open]);
+  const current = LAYOUTS.find((item) => item.mode === layout) ?? LAYOUTS[0];
+  if (!current) {
+    return null;
+  }
+  return (
+    <div className="layouts" ref={root}>
+      <button
+        type="button"
+        className="layout-current"
+        title={`Layout: ${current.title}`}
+        aria-label={`Layout: ${current.title}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        <LayoutIcon rows={current.rows} columns={current.columns} />
+        <span className="caret" aria-hidden="true">
+          ▾
+        </span>
+      </button>
+      {open && (
+        <div className="layout-menu" role="menu">
+          {LAYOUTS.map((item) => (
+            <button
+              type="button"
+              key={item.mode}
+              role="menuitemradio"
+              aria-checked={layout === item.mode}
+              className={layout === item.mode ? "active" : ""}
+              title={item.title}
+              aria-label={item.title}
+              onClick={() => {
+                setLayout(item.mode);
+                setOpen(false);
+              }}
+            >
+              <LayoutIcon rows={item.rows} columns={item.columns} />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The layouts that are an even grid of this size, without draggable dividers. */
+const EVEN_GRID: Partial<Record<LayoutMode, number>> = { grid3: 3, grid4: 4 };
+
+export function TopBar() {
   const sidebarHidden = useStore((state) => state.sidebarHidden);
   const hint = `${window.hive.platform === "darwin" ? "Cmd" : "Ctrl"}+B`;
   const label = `${sidebarHidden ? "Show" : "Hide"} the left panel (${hint})`;
@@ -65,19 +170,7 @@ export function TopBar() {
       </button>
       <div className="topbar-fill" {...endOfListProps()} />
       <UpdateNotice />
-      <div className="layouts">
-        {LAYOUTS.map((item) => (
-          <button
-            type="button"
-            key={item.mode}
-            className={layout === item.mode ? "active" : ""}
-            title={item.title}
-            onClick={() => setLayout(item.mode)}
-          >
-            {item.icon}
-          </button>
-        ))}
-      </div>
+      <LayoutMenu />
     </div>
   );
 }
@@ -247,6 +340,7 @@ function Pane({ index }: { index: number }) {
     (state) => state.activePane === index && state.layout !== "single",
   );
   const dropTarget = useStore((state) => state.dropTarget === index);
+  const layout = useStore((state) => state.layout);
   const sessionState = useStore(
     (state) =>
       state.openSessions.find((item) => item.id === state.slots[index])
@@ -259,7 +353,9 @@ function Pane({ index }: { index: number }) {
   const agentId = useStore((state) =>
     state.slots[index] ? (state.agentViews[state.slots[index]] ?? null) : null,
   );
-  const classes = `pane ${active ? "active" : ""} ${dropTarget ? "drop" : ""} state-${sessionState}`;
+  // In a split layout, a pane that waits for you pulses, so you see it among the others.
+  const alert = layout !== "single" && sessionState === "waiting";
+  const classes = `pane ${active ? "active" : ""} ${dropTarget ? "drop" : ""} ${alert ? "alert" : ""} state-${sessionState}`;
   if (!tabId || !tab) {
     return (
       // biome-ignore lint/a11y/noStaticElementInteractions: A pointer-only surface. The keys have their own handlers elsewhere.
@@ -341,6 +437,7 @@ export function PaneLayout() {
   const splitX = useStore((state) => state.splitX);
   const splitY = useStore((state) => state.splitY);
   const container = useRef<HTMLDivElement>(null);
+  const evenSize = EVEN_GRID[layout];
   const columns = `${splitX}fr 8px ${1 - splitX}fr`;
   const rows = `${splitY}fr 8px ${1 - splitY}fr`;
   const cell = (row: number, column: number): React.CSSProperties => ({
@@ -353,13 +450,18 @@ export function PaneLayout() {
       className="panes"
       ref={container}
       style={
-        layout === "single"
-          ? { gridTemplateColumns: "1fr", gridTemplateRows: "1fr" }
-          : layout === "sideBySide"
-            ? { gridTemplateColumns: columns, gridTemplateRows: "1fr" }
-            : layout === "stacked"
-              ? { gridTemplateColumns: "1fr", gridTemplateRows: rows }
-              : { gridTemplateColumns: columns, gridTemplateRows: rows }
+        evenSize
+          ? {
+              gridTemplateColumns: `repeat(${evenSize}, minmax(0, 1fr))`,
+              gridTemplateRows: `repeat(${evenSize}, minmax(0, 1fr))`,
+            }
+          : layout === "single"
+            ? { gridTemplateColumns: "1fr", gridTemplateRows: "1fr" }
+            : layout === "sideBySide"
+              ? { gridTemplateColumns: columns, gridTemplateRows: "1fr" }
+              : layout === "stacked"
+                ? { gridTemplateColumns: "1fr", gridTemplateRows: rows }
+                : { gridTemplateColumns: columns, gridTemplateRows: rows }
       }
     >
       {layout === "single" && <Pane index={0} />}
@@ -389,6 +491,16 @@ export function PaneLayout() {
           </div>
         </>
       )}
+      {evenSize !== undefined &&
+        Array.from({ length: evenSize * evenSize }, (_, index) => (
+          <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: The cells are fixed positions and never reorder.
+            key={index}
+            className="slot"
+          >
+            <Pane index={index} />
+          </div>
+        ))}
       {layout === "grid" && (
         <>
           <div style={cell(1, 1)} className="slot">
