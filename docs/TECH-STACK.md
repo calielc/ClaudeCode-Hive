@@ -46,6 +46,7 @@ All direct packages had the latest version on 2026-11-18. The `overrides` entry 
 - `src/renderer/themes.ts`, `format.ts`, `shortcuts.ts` and `styles.css`: themes and tag colors, formatting, keys and styles.
 - `e2e/`: the end-to-end tests. `app.ts` starts Hive, `fixture.ts` makes the fake sessions, and `fake-claude.cjs` replaces the `claude` command. See section 12.3.
 - `docs/images/`: the pictures of the documentation. `npm run screenshots` takes them with `e2e/screenshots.ts`. The script starts the real app on a made-up home folder with demo sessions, agents and usage numbers. `e2e/demo-claude.cjs` draws the demo terminals. See section 12.4.
+- `scripts/start.ts`: `npm run app`. It pulls `main`, installs the packages and the Electron binary when needed, and starts the built app, so the source code can replace the installer. `launch.sh`, `launch.ps1` and `launch.cmd` in the root only change to the repository folder and run it.
 - `scripts/make-icon.cjs`: draws `build/icon.png`. Run it with `npx electron scripts/make-icon.cjs`.
 - `scripts/next-version.ts`, `git-version.ts` and `release-version.ts`: the rules for the version of a release, the reading of git, and the command that the release workflow runs. `scripts/dist.ts` builds a local installer with a draft version. See section 14.
 - `biome.json`, `.editorconfig`, `.gitattributes` and `.husky/pre-commit`: the lint and the style, the line endings and the commit hook. See section 11.1.
