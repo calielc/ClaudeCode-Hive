@@ -49,6 +49,7 @@ The installers for Windows and macOS are on the Releases page of this repository
 
 Other commands:
 
+- `npm run app` gets the newest code from GitHub (a pull, when you are on `main` with no local changes), installs the packages when the lock file changed, and starts the built app. It needs no installer. The files `launch.sh`, `launch.ps1` and `launch.cmd` in the root of the repository do the same, from any folder, for bash, PowerShell and cmd. Point a shortcut at one of them to start Hive from the source code.
 - `npm test` runs the unit tests.
 - `npm run test:e2e` starts the real app and runs the end-to-end tests. The app windows open on your screen and take the focus.
 - `npm run test:e2e:docker` runs the same tests in a Docker container on a virtual screen, so nothing opens on your desktop. The first run builds the image and takes a few minutes.
