@@ -1,12 +1,21 @@
-export type LayoutMode = "single" | "sideBySide" | "stacked" | "grid";
+/** The names single, sideBySide, stacked and grid stay as they are, because Hive saves them. */
+export type LayoutMode =
+  | "single"
+  | "sideBySide"
+  | "stacked"
+  | "grid"
+  | "grid3"
+  | "grid4";
 
 export const CAPACITY: Record<LayoutMode, number> = {
   single: 1,
   sideBySide: 2,
   stacked: 2,
   grid: 4,
+  grid3: 9,
+  grid4: 16,
 };
-export const MAX_PANES = 4;
+export const MAX_PANES = 16;
 
 /** Which session shows in which pane. Everything here is data, so the rules can be tested without a window. */
 export interface PaneState {
@@ -14,7 +23,7 @@ export interface PaneState {
   tabIds: string[];
   /** Tabs that live in their own window. */
   detached: string[];
-  /** The session in each pane (up to 4). Panes past the layout's capacity are empty. */
+  /** The session in each pane (up to 16). Panes past the layout's capacity are empty. */
   slots: (string | null)[];
   /** The pane that gets the next session you pick. */
   activePane: number;

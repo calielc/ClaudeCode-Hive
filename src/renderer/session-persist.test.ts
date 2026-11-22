@@ -9,7 +9,7 @@ const good = {
   ],
   tabIds: ["b", "a"],
   detached: ["b"],
-  slots: ["a", null, null, null],
+  slots: ["a", ...Array(15).fill(null)],
   activePane: 0,
   selectedTabId: "a",
 };
@@ -20,7 +20,7 @@ test("a saved session comes back as it was saved, with the tab order of the tabs
     session?.tabs.map((tab) => tab.id),
     ["a", "b"],
   );
-  assert.deepEqual(session?.slots, ["a", null, null, null]);
+  assert.deepEqual(session?.slots, ["a", ...Array(15).fill(null)]);
   assert.deepEqual(session?.detached, ["b"]);
   assert.equal(session?.selectedTabId, "a");
   assert.equal(session?.tabs[1]?.resume, false);
@@ -54,7 +54,7 @@ test("entries that do not fit are dropped, not trusted", () => {
     ["A"],
   );
   assert.deepEqual(session?.detached, ["a"]);
-  assert.deepEqual(session?.slots, [null, "a", null, null]);
+  assert.deepEqual(session?.slots, [null, "a", ...Array(14).fill(null)]);
   assert.equal(session?.activePane, 0);
   assert.equal(session?.selectedTabId, null);
   assert.equal(session?.tabs[0]?.resume, true);

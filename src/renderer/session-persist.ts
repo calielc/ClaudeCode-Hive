@@ -1,4 +1,4 @@
-import type { PaneState } from "./panes";
+import { MAX_PANES, type PaneState } from "./panes";
 
 export interface Tab {
   id: string;
@@ -22,7 +22,7 @@ export interface SavedSession
 }
 
 const KEY = "hive.session.v1";
-const PANES = 4;
+const PANES = MAX_PANES;
 
 const isString = (value: unknown): value is string => typeof value === "string";
 
