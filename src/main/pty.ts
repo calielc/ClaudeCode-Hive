@@ -4,6 +4,7 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import type { PtyAttachOptions, PtyAttachResult, PtyExit } from "@shared/types";
 import * as nodePty from "node-pty";
+import { withoutSessionMarkers } from "./pty-env";
 
 /**
  * node-pty starts every process through a small helper program. npm can install it without the execute
@@ -80,11 +81,11 @@ export class PtyManager {
       ? ["/d", "/s", "/c", command]
       : ["-l", "-i", "-c", command];
     const env = {
-      ...process.env,
+      ...withoutSessionMarkers(process.env),
       TERM: "xterm-256color",
       COLORTERM: "truecolor",
       CLAUDE_SESSIONS_APP: "1",
-    } as Record<string, string>;
+    };
 
     const child = nodePty.spawn(shell, args, {
       name: "xterm-256color",
