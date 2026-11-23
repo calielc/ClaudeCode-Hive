@@ -20,6 +20,7 @@ export interface HiveState {
   agentViews: Record<string, string | null>;
   folders: string[];
   sidebarHidden: boolean;
+  fontSize: number;
   update: { version: string; url: string } | null;
   dismissedUpdate: string;
 }

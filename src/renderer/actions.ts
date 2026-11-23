@@ -1,4 +1,5 @@
 import type { OpenTabRef, SessionInfo } from "@shared/types";
+import { clampFontSize } from "./font-size";
 import {
   activate as activatePane,
   addTab,
@@ -224,6 +225,13 @@ export function selectedTab(): Tab | undefined {
 }
 
 // MARK: Settings
+
+/** Makes the font of all terminals bigger (plus steps) or smaller (minus steps). */
+export function changeFontSize(steps: number): void {
+  setState((current) => ({
+    fontSize: clampFontSize(current.fontSize + steps),
+  }));
+}
 
 export function setTheme(name: string): void {
   setState({ themeName: name });

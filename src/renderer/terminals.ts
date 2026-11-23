@@ -3,8 +3,12 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 import type { PtyExit } from "@shared/types";
+import { DEFAULT_FONT_SIZE } from "./font-size";
 import { shortcutFor } from "./shortcuts";
 import { type TerminalTheme, toXtermTheme } from "./themes";
+
+/** The font size of all terminals. A new terminal starts with it. */
+let fontSize = DEFAULT_FONT_SIZE;
 
 /** One terminal per session. It lives as long as the tab, also while no pane shows it. */
 export interface TerminalEntry {
@@ -74,7 +78,7 @@ export function createEntry(
   listenOnce();
   const term = new Terminal({
     fontFamily: FONT,
-    fontSize: 13,
+    fontSize,
     cursorBlink: true,
     scrollback: 10000,
     allowProposedApi: true,
@@ -264,11 +268,28 @@ export function applyTheme(theme: TerminalTheme): void {
   }
 }
 
+/** Gives every terminal this font size and fits it again, because the number of columns and rows changes. */
+export function applyFontSize(size: number): void {
+  if (size === fontSize) {
+    return;
+  }
+  fontSize = size;
+  for (const entry of entries.values()) {
+    entry.term.options.fontSize = size;
+    fitEntry(entry);
+  }
+}
+
 export function focusEntry(id: string): void {
   const entry = entries.get(id);
   if (entry?.element.isConnected) {
     entry.term.focus();
   }
+}
+
+/** The font size that a terminal draws with. Used by tests. */
+export function terminalFontSize(id: string): number | undefined {
+  return entries.get(id)?.term.options.fontSize;
 }
 
 /** The text on the screen and in the scrollback of a terminal. Used by tests. */
