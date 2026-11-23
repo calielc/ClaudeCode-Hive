@@ -5,6 +5,7 @@ import type {
   UsageSnapshot,
 } from "@shared/types";
 import { useSyncExternalStore } from "react";
+import { clampFontSize } from "./font-size";
 import { initialPaneState, type LayoutMode, type PaneState } from "./panes";
 import { loadSession, saveSession, type Tab } from "./session-persist";
 
@@ -21,6 +22,8 @@ export interface State extends PaneState {
   selectedFolder: string;
   tabs: Tab[];
   themeName: string;
+  /** The font size of every terminal, in pixels. Ctrl and the mouse wheel change it. */
+  fontSize: number;
   tags: Record<string, string>;
   /** Where the vertical and the horizontal divider are, from 0 to 1. */
   splitX: number;
@@ -56,6 +59,7 @@ interface Saved {
   selectedFolder?: string;
   layout?: LayoutMode;
   themeName?: string;
+  fontSize?: number;
   tags?: Record<string, string>;
   splitX?: number;
   splitY?: number;
@@ -87,6 +91,7 @@ export function createInitialState(): State {
         : (folders[0] ?? ""),
     tabs: session?.tabs ?? [],
     themeName: saved.themeName ?? "Tokyo Night",
+    fontSize: clampFontSize(saved.fontSize),
     tags: saved.tags ?? {},
     splitX: saved.splitX ?? 0.5,
     splitY: saved.splitY ?? 0.5,
@@ -141,6 +146,7 @@ function persist(): void {
     selectedFolder: state.selectedFolder,
     layout: state.layout,
     themeName: state.themeName,
+    fontSize: state.fontSize,
     tags: state.tags,
     splitX: state.splitX,
     splitY: state.splitY,
@@ -154,7 +160,7 @@ function persist(): void {
   }
 }
 
-function subscribe(listener: () => void): () => void {
+export function subscribe(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
@@ -172,6 +178,10 @@ export function followOtherWindows(): void {
       state = {
         ...state,
         themeName: saved.themeName ?? state.themeName,
+        fontSize:
+          saved.fontSize === undefined
+            ? state.fontSize
+            : clampFontSize(saved.fontSize),
         tags: saved.tags ?? state.tags,
       };
       for (const listener of listeners) {

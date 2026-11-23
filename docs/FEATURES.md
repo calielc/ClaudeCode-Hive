@@ -58,6 +58,7 @@ Four sessions in the grid layout. The blue ring marks the selected pane.
 The picture shows the transcript of the agent "Find the QR login code". The terminal of the session keeps running behind it. A click on Main brings it back.
 
 - **Keyboard focus.** After a new selection or a layout change, the terminal of the selected pane gets the keyboard. It gets the keyboard again after the window returns to the front. A search field in use keeps the focus.
+- **Font size.** Ctrl and the mouse wheel change the font size of all terminals at once, in the main window and in the undocked windows. Wheel up makes the font bigger and wheel down makes it smaller, by one pixel for each notch. The size stays between 8 and 32 pixels, and the default is 13. A pinch on a touchpad does the same. On macOS, Cmd and the wheel also work. Hive saves the size. The terminals fit again to their panes, so the number of columns and rows changes.
 - **Color themes.** Six terminal themes exist: Tokyo Night (default), Dracula, Nord, Gruvbox Dark, Solarized Dark and Paper (light). The Theme menu in the menu bar selects a theme. A mark shows the current theme. Hive saves the choice. It applies to all open terminals at once.
 - **Links.** A click on a web address in the terminal opens it in the default browser of the system. This works for addresses that wrap over several lines. It also works for links that a program marks itself (OSC 8). Only `http`, `https` and `mailto` links open. A link never opens a window of the app.
 
@@ -122,6 +123,7 @@ Eight colors mark sessions: red, orange, yellow, green, teal, blue, purple and p
 - New session: Cmd+N on macOS and Ctrl+N on other systems.
 - Search: Cmd+F on macOS and Ctrl+F on other systems.
 - Hide or show the left panel: Cmd+B on macOS and Ctrl+B on other systems.
+- Font size of the terminals: Ctrl and the mouse wheel (Cmd and the wheel also work on macOS). See section 3.
 - Copy, cut and paste: Ctrl+C, Ctrl+X and Ctrl+V work on every system. On macOS, Cmd+C, Cmd+X and Cmd+V also work. A terminal cannot cut, so cut copies. Ctrl+C and Ctrl+X without a selection still go to Claude Code. If an image is on the clipboard, paste goes to Claude Code as its own image paste key (Ctrl+V, and Alt+V on Windows).
 - Cards, session rows, agent rows and tabs take the keyboard focus. Tab moves the focus between them. Enter or Space does what a click does. A ring shows the focused item.
 - Plain Shift+Tab goes to Claude Code. The code is in `src/renderer/shortcuts.ts`.
