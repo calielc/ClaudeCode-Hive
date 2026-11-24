@@ -3,13 +3,14 @@ import { after, before, describe, test } from "node:test";
 import { card, eventually, type Hive, launchHive, row } from "./app";
 import { IDS } from "./fixture";
 
-// The fake command echoes what it receives as JSON. The terminal line turns a carriage return into a line feed.
+// The fake command echoes what it receives as JSON. On macOS and Linux the terminal line turns a carriage return into a
+// line feed. On Windows it can arrive as a carriage return, so the end of the line is any of the three forms.
 // Escape then Enter is the new line key of Claude Code, and Enter alone submits.
-const NEW_LINE = 'echo:"\\u001b\\n"';
-const SUBMIT = 'echo:"\\n"';
+const NEW_LINE = /echo:"\\u001b(?:\\r\\n|\\r|\\n)"/g;
+const SUBMIT = /echo:"(?:\\r\\n|\\r|\\n)"/g;
 
-function count(text: string, needle: string): number {
-  return text.split(needle).length - 1;
+function count(text: string, needle: RegExp): number {
+  return text.match(needle)?.length ?? 0;
 }
 
 describe("the keys that add a line to a prompt", () => {
