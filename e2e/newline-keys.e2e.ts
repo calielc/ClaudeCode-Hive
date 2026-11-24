@@ -36,7 +36,7 @@ describe("the keys that add a line to a prompt", () => {
       const submitsBefore = count(await text(), SUBMIT);
       await hive.page.keyboard.press(combo);
       await eventually(async () =>
-        assert.equal(count(await text(), NEW_LINE), newLinesBefore + 1),
+        assert.equal(count(await text(), NEW_LINE), newLinesBefore + 1, JSON.stringify((await text()).slice(-400))),
       );
       assert.equal(count(await text(), SUBMIT), submitsBefore);
     });
