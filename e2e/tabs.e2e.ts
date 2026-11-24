@@ -205,6 +205,99 @@ describe("sessions, tabs and panes", () => {
   });
 });
 
+describe("a double click on a tab", () => {
+  let hive: Hive;
+
+  before(async () => {
+    hive = await launchHive();
+    await row(hive.page, "Fix login flow").click();
+    await tab(hive.page, "Fix login flow").waitFor();
+    await row(hive.page, "Write release notes").click();
+    await tab(hive.page, "Write release notes").waitFor();
+  });
+  after(async () => {
+    await hive.close();
+  });
+
+  test("switches from side by side to the single layout with that tab selected", async () => {
+    const { page } = hive;
+    await page.locator(".layouts .layout-current").click();
+    await page
+      .locator('.layout-menu button[title="Side by side (1×2)"]')
+      .click();
+    await eventually(async () =>
+      assert.equal(await page.locator(".pane").count(), 2),
+    );
+    await tab(page, "Write release notes").dblclick();
+    await eventually(async () => {
+      const state = await hive.state();
+      assert.equal(state.layout, "single");
+      assert.equal(state.selectedTabId, IDS.plain);
+      assert.equal(state.slots[0], IDS.plain);
+      assert.equal(await page.locator(".pane").count(), 1);
+    });
+  });
+
+  test("changes nothing while the layout is already single", async () => {
+    const { page } = hive;
+    // This test sets the layout itself, so that it does not depend on the result of the test before.
+    await page.locator(".layouts .layout-current").click();
+    await page.locator('.layout-menu button[title="Single pane"]').click();
+    await eventually(async () =>
+      assert.equal((await hive.state()).layout, "single"),
+    );
+    await tab(page, "Fix login flow").dblclick();
+    await page.waitForTimeout(300);
+    const state = await hive.state();
+    assert.equal(state.layout, "single");
+    // The two clicks of the double click select the tab, as a click does.
+    assert.equal(state.selectedTabId, IDS.login);
+    assert.equal(state.slots[0], IDS.login);
+    assert.equal(await page.locator(".pane").count(), 1);
+    assert.equal(state.tabs.length, 2);
+  });
+
+  test("does not switch the layout when the double click comes from a button of the tab", async () => {
+    const { page } = hive;
+    await page.locator(".layouts .layout-current").click();
+    await page
+      .locator('.layout-menu button[title="Side by side (1×2)"]')
+      .click();
+    await eventually(async () =>
+      assert.equal(await page.locator(".pane").count(), 2),
+    );
+    // A real double click on these buttons would close or undock the session, and the test could not look at the layout
+    // afterwards. So the test sends a dblclick event straight to each button. The event bubbles to the tab, as it does
+    // after a real double click, and no click starts the close or the undock.
+    for (const title of ["Undock into its own window", "Close session"]) {
+      await tab(page, "Write release notes")
+        .locator(`.tab-close[title="${title}"]`)
+        .dispatchEvent("dblclick");
+    }
+    await page.waitForTimeout(300);
+    const state = await hive.state();
+    assert.equal(state.layout, "sideBySide");
+    assert.equal(await page.locator(".pane").count(), 2);
+    assert.equal(state.tabs.length, 2);
+    assert.deepEqual(state.detached, []);
+  });
+
+  test("does what a click does for a tab in its own window", async () => {
+    const { page, app } = hive;
+    await tab(page, "Write release notes")
+      .locator('.tab-close[title="Undock into its own window"]')
+      .click();
+    await eventually(async () => assert.equal(app.windows().length, 2));
+    await tab(page, "Write release notes").dblclick();
+    await page.waitForTimeout(300);
+    assert.equal((await hive.state()).layout, "sideBySide");
+    const other = app.windows().find((window) => window !== page);
+    assert.ok(other);
+    await other.close();
+    await eventually(async () => assert.equal(app.windows().length, 1));
+  });
+});
+
 describe("the tab bar with many tabs", () => {
   let hive: Hive;
 

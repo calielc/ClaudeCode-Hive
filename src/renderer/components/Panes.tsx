@@ -236,6 +236,18 @@ function TabBar() {
             style={color ? { background: `${color}59` } : undefined}
             {...reorderProps(tab.id, "x")}
             onClick={() => activateTab(tab.id)}
+            // A double click on a tab in a split layout shows that tab alone. A button of the tab (undock, close) does not count.
+            onDoubleClick={(event: MouseEvent) => {
+              if (
+                layout === "single" ||
+                detached.includes(tab.id) ||
+                (event.target as HTMLElement).closest("button")
+              ) {
+                return;
+              }
+              activateTab(tab.id);
+              setLayout("single");
+            }}
             {...pressable(() => activateTab(tab.id))}
             onContextMenu={(event: MouseEvent) => {
               event.preventDefault();
