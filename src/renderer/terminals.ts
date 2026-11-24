@@ -109,6 +109,11 @@ export function createEntry(
 
   // Keys that Hive handles itself must not reach the terminal.
   term.attachCustomKeyEventHandler((event) => {
+    if (isNewLineKey(event)) {
+      event.preventDefault();
+      term.input(NEW_LINE);
+      return false;
+    }
     const handled = clipboardKey(term, event);
     return handled === undefined ? shortcutFor(event) === undefined : !handled;
   });
@@ -123,6 +128,19 @@ export function createEntry(
     }
   });
   return entry;
+}
+
+/** Claude Code reads Escape and Enter as a new line in the prompt. A terminal sends a plain Enter for Shift+Enter and Ctrl+Enter, which submits. */
+const NEW_LINE = "\x1b\r";
+
+/** Shift, Ctrl, Alt or Cmd with Enter. Only the key press counts, and an Enter that confirms an input method does not. */
+function isNewLineKey(event: KeyboardEvent): boolean {
+  return (
+    event.type === "keydown" &&
+    event.key === "Enter" &&
+    !event.isComposing &&
+    (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey)
+  );
 }
 
 /**
