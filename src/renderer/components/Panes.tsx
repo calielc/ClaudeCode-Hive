@@ -249,6 +249,23 @@ function TabBar() {
               setLayout("single");
             }}
             {...pressable(() => activateTab(tab.id))}
+            // The middle button starts the scroll mode of the system on some platforms, so its press is cancelled.
+            onMouseDown={(event: MouseEvent) => {
+              if (event.button === 1) {
+                event.preventDefault();
+              }
+            }}
+            // A middle click on a tab closes it, like the close button. A button of the tab (undock, close) does not count.
+            onAuxClick={(event: MouseEvent) => {
+              if (
+                event.button !== 1 ||
+                (event.target as HTMLElement).closest("button")
+              ) {
+                return;
+              }
+              event.preventDefault();
+              closeTab(tab.id);
+            }}
             onContextMenu={(event: MouseEvent) => {
               event.preventDefault();
               setState({
