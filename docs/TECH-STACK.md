@@ -114,7 +114,6 @@ The scripts run with the real `node` that the login shell finds. Without Node, t
 - A scan of 59 sessions takes about 20 ms. It takes 3 ms for unchanged files. Hive caches titles by file time.
 - Hive reads the session folder every 1.5 seconds and the usage file every 5 seconds. The main process reads the status files every second.
 - The agent and shell list of an open session refreshes every 2 seconds. The transcript of an open agent and the output of an open shell refresh every 1.5 seconds.
-- The agent list of an open session refreshes every 2 seconds. The transcript of an open agent refreshes every 1.5 seconds.
 
 ## 11. Build and run
 
