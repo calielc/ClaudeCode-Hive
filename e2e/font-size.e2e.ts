@@ -132,6 +132,12 @@ describe("the font size of the terminals", () => {
       ctrlKey: modifier === "Control",
       metaKey: modifier === "Meta",
     });
+    // The movement that is left over (1 pixel on macOS, 21 pixels elsewhere) must not reach the next test. A small
+    // movement in the other direction drops it, because a change of direction empties the accumulator.
+    await sendWheel(page, 1, 1, {
+      ctrlKey: modifier === "Control",
+      metaKey: modifier === "Meta",
+    });
     await page.keyboard.up(modifier);
     await page.waitForTimeout(300);
     await eventually(async () =>
