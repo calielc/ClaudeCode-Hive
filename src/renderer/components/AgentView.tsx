@@ -1,5 +1,9 @@
-import type { AgentSummary, TranscriptEntry } from "@shared/types";
-import { useEffect, useRef, useState } from "react";
+import type {
+  AgentSummary,
+  ShellSummary,
+  TranscriptEntry,
+} from "@shared/types";
+import { type UIEvent, useEffect, useRef, useState } from "react";
 import { activateTab } from "../actions";
 import { shortModelName } from "../format";
 import { setState, useStore } from "../state";
@@ -58,10 +62,71 @@ export function useAgents(folder: string, sessionId: string): AgentSummary[] {
   );
 }
 
+/** The background shells of a session. It stays empty for a session without shells. */
+export function useShells(folder: string, sessionId: string): ShellSummary[] {
+  return usePolled(
+    () => window.hive.shells.list(folder, sessionId),
+    [],
+    2000,
+    `${folder}|${sessionId}`,
+  );
+}
+
+const SHELL_PREFIX = "shell:";
+
+/** The shell that a selection names, or null for an agent. Agent ids never hold a colon. */
+function shellIdOf(selection: string): string | null {
+  return selection.startsWith(SHELL_PREFIX)
+    ? selection.slice(SHELL_PREFIX.length)
+    : null;
+}
+
+/** One row of the list, for an agent or a shell. `key` is what the pane selection holds. */
+interface Item {
+  key: string;
+  kind: "agent" | "shell";
+  description: string;
+  title: string;
+  icon: string;
+  model?: string;
+  running: boolean;
+  updated: number;
+}
+
+function agentItem(agent: AgentSummary): Item {
+  return {
+    key: agent.id,
+    kind: "agent",
+    description: agent.description,
+    title: agent.agentType
+      ? `${agent.agentType}: ${agent.description}`
+      : agent.description,
+    icon: typeIcon(agent.agentType),
+    model: agent.model,
+    running: agent.running,
+    updated: agent.updated,
+  };
+}
+
+function shellItem(shell: ShellSummary): Item {
+  return {
+    key: `${SHELL_PREFIX}${shell.id}`,
+    kind: "shell",
+    description: shell.description,
+    title: shell.command
+      ? `${shell.description}: ${shell.command}`
+      : shell.description,
+    icon: "$",
+    running: shell.running,
+    updated: shell.updated,
+  };
+}
+
 /**
- * The agents of a session as rows on its card in the left panel. The first row is Main, the session itself. Every other row is an
- * agent. A click on an agent shows its transcript in the pane of the session, and a click on Main shows the terminal.
- * Running agents and the open one always show. Finished agents fold behind a "+N done" row, and a cross hides one.
+ * The agents and the background shells of a session as rows on its card in the left panel. The first row is Main, the session itself. Every other row is an
+ * agent or a shell. A click on an agent shows its transcript in the pane of the session, a click on a shell shows its output, and a
+ * click on Main shows the terminal. Running rows and the open one always show. Finished rows fold behind a "+N done" row, and a cross
+ * hides one.
  */
 export function AgentList({
   tabId,
@@ -73,30 +138,34 @@ export function AgentList({
   const selected = useStore((state) => state.agentViews[tabId] ?? null);
   // A finished agent leaves the list 30 minutes after it finished. The open one stays. The poll keeps the clock fresh.
   const now = Date.now();
-  const agents = useAgents(folder, tabId).filter(
-    (agent) =>
-      agent.running || agent.id === selected || now - agent.updated < EXPIRE_MS,
+  const agentItems = useAgents(folder, tabId).map(agentItem);
+  const shellItems = useShells(folder, tabId).map(shellItem);
+  const agents = [...agentItems, ...shellItems].filter(
+    (item) =>
+      item.running || item.key === selected || now - item.updated < EXPIRE_MS,
   );
   const [showDone, setShowDone] = useState(false);
   const [dismissed, setDismissed] = useState<string[]>([]);
   if (agents.length === 0) {
     return null;
   }
-  const choose = (agentId: string | null): void => {
+  const choose = (key: string | null): void => {
     setState((current) => ({
-      agentViews: { ...current.agentViews, [tabId]: agentId },
+      agentViews: { ...current.agentViews, [tabId]: key },
     }));
     activateTab(tabId);
   };
   const folded = agents.filter(
     (agent) =>
-      !agent.running && agent.id !== selected && !dismissed.includes(agent.id),
+      !agent.running &&
+      agent.key !== selected &&
+      !dismissed.includes(agent.key),
   );
   const visible = agents.filter(
     (agent) =>
       agent.running ||
-      agent.id === selected ||
-      (showDone && !dismissed.includes(agent.id)),
+      agent.key === selected ||
+      (showDone && !dismissed.includes(agent.key)),
   );
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: A pointer-only surface. The keys have their own handlers elsewhere.
@@ -116,39 +185,36 @@ export function AgentList({
         // biome-ignore lint/a11y/useKeyWithClickEvents: The role and the keyboard handler come from pressable().
         // biome-ignore lint/a11y/noStaticElementInteractions: The role and the keyboard handler come from pressable().
         <div
-          key={agent.id}
-          className={`agent-row ${selected === agent.id ? "active" : ""} ${agent.running ? "" : "done"}`}
-          title={
-            agent.agentType
-              ? `${agent.agentType}: ${agent.description}`
-              : agent.description
-          }
-          onClick={() => choose(agent.id)}
-          {...pressable(() => choose(agent.id))}
+          key={agent.key}
+          className={`agent-row ${selected === agent.key ? "active" : ""} ${agent.running ? "" : "done"}`}
+          data-kind={agent.kind === "shell" ? "shell" : undefined}
+          title={agent.title}
+          onClick={() => choose(agent.key)}
+          {...pressable(() => choose(agent.key))}
         >
           <i className={`dot ${agent.running ? "working" : "ready"}`} />
-          <span className="agent-type">{typeIcon(agent.agentType)}</span>
+          <span className="agent-type">{agent.icon}</span>
           <span className="agent-name">{agent.description}</span>
           {agent.model && (
             <span className="agent-model">{shortModelName(agent.model)}</span>
           )}
-          {!agent.running && agent.id !== selected && (
+          {!agent.running && agent.key !== selected && (
             // biome-ignore lint/a11y/useSemanticElements: A real button cannot sit inside the row, which is a button itself.
             <span
               className="agent-dismiss"
               role="button"
               tabIndex={0}
-              aria-label="Hide this agent"
-              title="Hide this agent"
+              aria-label={`Hide this ${agent.kind}`}
+              title={`Hide this ${agent.kind}`}
               onClick={(event) => {
                 event.stopPropagation();
-                setDismissed((current) => [...current, agent.id]);
+                setDismissed((current) => [...current, agent.key]);
               }}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
                   event.stopPropagation();
-                  setDismissed((current) => [...current, agent.id]);
+                  setDismissed((current) => [...current, agent.key]);
                 }
               }}
             >
@@ -174,6 +240,73 @@ export function AgentList({
   );
 }
 
+/** What the pane of a session shows in place of the terminal: the transcript of an agent or the output of a shell. */
+export function SidePaneView({
+  folder,
+  sessionId,
+  selection,
+}: {
+  folder: string;
+  sessionId: string;
+  selection: string;
+}) {
+  const shellId = shellIdOf(selection);
+  return shellId === null ? (
+    <AgentTranscript
+      folder={folder}
+      sessionId={sessionId}
+      agentId={selection}
+    />
+  ) : (
+    <ShellOutput folder={folder} sessionId={sessionId} shellId={shellId} />
+  );
+}
+
+/** The output of one background shell as plain text. It reads the file again while the shell runs. */
+function ShellOutput({
+  folder,
+  sessionId,
+  shellId,
+}: {
+  folder: string;
+  sessionId: string;
+  shellId: string;
+}) {
+  const output = usePolled(
+    () => window.hive.shells.output(folder, sessionId, shellId),
+    "",
+    1500,
+    `${folder}|${sessionId}|${shellId}`,
+  );
+  const { box, onScroll } = useFollowEnd(output);
+  return (
+    <div className="agent-transcript" ref={box} onScroll={onScroll}>
+      {output === "" && <div className="agent-empty">Nothing to show yet.</div>}
+      <pre className="shell-output" data-testid="shell-output">
+        {output}
+      </pre>
+    </div>
+  );
+}
+
+/** Keeps a scroll box at its end while `content` grows, unless the reader scrolled up. */
+function useFollowEnd(content: unknown) {
+  const box = useRef<HTMLDivElement>(null);
+  const stuck = useRef(true);
+  useEffect(() => {
+    const element = box.current;
+    if (content !== undefined && element && stuck.current) {
+      element.scrollTop = element.scrollHeight;
+    }
+  }, [content]);
+  const onScroll = (event: UIEvent<HTMLDivElement>): void => {
+    const element = event.currentTarget;
+    stuck.current =
+      element.scrollHeight - element.scrollTop - element.clientHeight < 40;
+  };
+  return { box, onScroll };
+}
+
 /** The transcript of one agent as a conversation. It reads the file again while the agent runs. */
 export function AgentTranscript({
   folder,
@@ -190,25 +323,9 @@ export function AgentTranscript({
     1500,
     `${folder}|${sessionId}|${agentId}`,
   );
-  const box = useRef<HTMLDivElement>(null);
-  const stuck = useRef(true);
-  // Follow the end of the transcript, unless the reader scrolled up.
-  useEffect(() => {
-    const element = box.current;
-    if (element && stuck.current) {
-      element.scrollTop = element.scrollHeight;
-    }
-  }, [entries]);
+  const { box, onScroll } = useFollowEnd(entries);
   return (
-    <div
-      className="agent-transcript"
-      ref={box}
-      onScroll={(event) => {
-        const element = event.currentTarget;
-        stuck.current =
-          element.scrollHeight - element.scrollTop - element.clientHeight < 40;
-      }}
-    >
+    <div className="agent-transcript" ref={box} onScroll={onScroll}>
       {entries.length === 0 && (
         <div className="agent-empty">Nothing to show yet.</div>
       )}

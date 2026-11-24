@@ -939,6 +939,14 @@ button {
   user-select: text;
 }
 
+.shell-output {
+  margin: 0;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .agent-transcript > * {
   margin-bottom: 10px;
 }

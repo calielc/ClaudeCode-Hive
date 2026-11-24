@@ -1,4 +1,5 @@
 import {
+  appendFileSync,
   mkdirSync,
   mkdtempSync,
   rmSync,
@@ -6,7 +7,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 
 /** Ids of the fake sessions. They use letters, digits and dashes only, like real session ids. */
 export const IDS = {
@@ -69,6 +70,17 @@ export interface AgentSpec {
   ageMs?: number;
 }
 
+export interface ShellSpec {
+  id: string;
+  description?: string;
+  command?: string;
+  /** A running shell has no end notification. A done shell has one. */
+  done: boolean;
+  /** How long ago the shell finished. For a running shell, how long ago its transcript last named it. */
+  ageMs?: number;
+  output?: string;
+}
+
 export function writeSession(fixture: Fixture, spec: SessionSpec): void {
   const file = join(fixture.projectDirectory, `${spec.id}.jsonl`);
   const lines = [
@@ -127,6 +139,70 @@ export function writeAgent(
   ];
   writeFileSync(file, `${lines.map(line).join("\n")}\n`);
   setAge(file, spec.ageMs ?? 0);
+}
+
+/** Where the output of a background shell lives: `<tmp>/claude-<digits>/<project folder name>/<session>/tasks/<id>.output`. The fixture root stands for the tmp folder. */
+export function shellOutputPath(
+  fixture: Fixture,
+  sessionId: string,
+  shellId: string,
+): string {
+  return join(
+    dirname(fixture.home),
+    "claude-501",
+    basename(fixture.projectDirectory),
+    sessionId,
+    "tasks",
+    `${shellId}.output`,
+  );
+}
+
+/** Adds a background shell to a session. The lines are appended to the transcript of the session and have the shape of the ones of Claude Code. */
+export function writeShell(
+  fixture: Fixture,
+  sessionId: string,
+  spec: ShellSpec,
+): void {
+  const outputFilePath = shellOutputPath(fixture, sessionId, spec.id);
+  mkdirSync(dirname(outputFilePath), { recursive: true });
+  writeFileSync(outputFilePath, spec.output ?? "");
+  const updated = Date.now() - (spec.ageMs ?? 0);
+  const lines: unknown[] = [
+    {
+      type: "attachment",
+      timestamp: new Date(updated - (spec.done ? MINUTE : 0)).toISOString(),
+      attachment: {
+        type: "task_status",
+        taskId: spec.id,
+        taskType: "local_bash",
+        description: spec.description,
+        status: "running",
+        outputFilePath,
+        shell:
+          spec.command === undefined
+            ? undefined
+            : {
+                command: spec.command,
+                kind: "bash",
+                toolUseId: `toolu-${spec.id}`,
+              },
+      },
+    },
+  ];
+  if (spec.done) {
+    lines.push({
+      type: "user",
+      timestamp: new Date(updated).toISOString(),
+      message: {
+        role: "user",
+        content: `<task-notification>\n<task-id>${spec.id}</task-id>\n<tool-use-id>toolu-${spec.id}</tool-use-id>\n<output-file>${outputFilePath}</output-file>\n<status>completed</status>\n<summary>Background command done</summary>\n</task-notification>`,
+      },
+    });
+  }
+  const transcript = join(fixture.projectDirectory, `${sessionId}.jsonl`);
+  appendFileSync(transcript, `${lines.map(line).join("\n")}\n`);
+  // A transcript that stays quiet for 15 minutes ends every shell, so keep it fresh.
+  setAge(transcript, 0);
 }
 
 /**

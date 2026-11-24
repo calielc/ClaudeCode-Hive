@@ -28,6 +28,7 @@ All direct packages had the latest version on 2026-11-18. The `overrides` entry 
 - `src/main/index.ts`: app start, windows, undock, menu, tray, IPC handlers, notifications and test seams.
 - `src/main/sessions.ts`: scans the session files and reads the titles and the details of open sessions.
 - `src/main/agents.ts`: lists the agents of a session and reads the transcript of one agent.
+- `src/main/shells.ts`: lists the background shells of a session and reads the output of one shell.
 - `src/main/agent-transcript.ts`: turns the file of an agent into readable items. It also finds the last model and tells if the agent is done.
 - `src/main/paths.ts`: the Claude folder, the project folder name rule and the repository name.
 - `src/main/search.ts`, `search.worker.ts`, `search-core.ts`, `fold-search.ts`: full text search in a worker thread.
@@ -43,7 +44,7 @@ All direct packages had the latest version on 2026-11-18. The `overrides` entry 
 - `src/renderer/font-size.ts`: the limits of the font size, and the rule that turns wheel movement into steps, with one named notch for each kind of input (wheel, macOS wheel and pinch). `main.tsx` listens for Ctrl and the wheel in every window, and it tracks whether a real Control key is held to tell a pinch from a wheel, and `applyFontSize` in `terminals.ts` gives all terminals the size.
 - `src/renderer/session-persist.ts`: saves and restores the open tabs across a page reload.
 - `src/renderer/badge.ts`: draws the badge image for the number of waiting sessions.
-- `src/renderer/components/`: `Sidebar`, `Panes` (top bar, tabs, panes, splitters), `AgentView` (agent list and transcript), `ContextMenu`, `UndockedView`, `reorder` and `a11y`.
+- `src/renderer/components/`: `Sidebar`, `Panes` (top bar, tabs, panes, splitters), `AgentView` (agent and shell list, agent transcript and shell output), `ContextMenu`, `UndockedView`, `reorder` and `a11y`.
 - `src/renderer/themes.ts`, `format.ts`, `shortcuts.ts` and `styles.css`: themes and tag colors, formatting, keys and styles.
 - `e2e/`: the end-to-end tests. `app.ts` starts Hive, `fixture.ts` makes the fake sessions, and `fake-claude.cjs` replaces the `claude` command. See section 12.3.
 - `docs/images/`: the pictures of the documentation. `npm run screenshots` takes them with `e2e/screenshots.ts`. The script starts the real app on a made-up home folder with demo sessions, agents and usage numbers. `e2e/demo-claude.cjs` draws the demo terminals. See section 12.4.
@@ -62,6 +63,8 @@ All direct packages had the latest version on 2026-11-18. The `overrides` entry 
 - Card details: Hive reads the last 512 KB of the transcript backwards. It takes `gitBranch`, the `last-prompt` record, the model of the last assistant message and `cwd`. The `cwd` value gives the repository. Hive reads details for open sessions only.
 - Agents: `<session-id>/subagents/agent-*.meta.json` has `agentType`, `description` and sometimes `finished`. The matching `.jsonl` gives the transcript and the model.
 - Done agent: an agent is done when `finished` is true, or when its last message is an answer with no tool call. An agent whose transcript is quiet for 15 minutes also counts as done. The interface hides a done agent 30 minutes after the last change.
+- Shells: the transcript `<session-id>.jsonl` holds a `task_status` line for each shell, with `taskType` `local_bash`, `taskId`, `description`, `shell.command` and `outputFilePath`. A `<task-notification>` line with the same `<task-id>` marks the end. Hive reads only the last 6 MB of the transcript. A shell is done after its end note, or when the transcript is quiet for 15 minutes. The interface hides a done shell 30 minutes after its last line.
+- Shell output: Hive never reads a path that the renderer sends. The renderer sends the folder, the session id and the shell id. Main takes the path from the transcript and reads it only when its last four segments are the project folder name, the session id, `tasks` and `<shell id>.output`, and when it is a regular file, not a link. It returns the last 512 KB, cut at a line start.
 - State of a session: `~/.claude-sessions/status/<session-id>.json` with `{"state":"working|waiting|ready","ts":...}`. The hooks write it. For a waiting session, the file also holds the `message` and the `type` of the question.
 - Usage: `~/.claude-sessions/usage.json` with `five_hour`, `seven_day` (`used_percentage` and `resets_at` in seconds) and `model_scoped`. The status line wrapper writes it.
 - Settings of Hive: the `localStorage` key `hive.settings.v1` holds the folders, the selected folder, the layout, the theme, the font size, the tags, the divider positions whether the left panel is hidden and the version whose update notice the user closed.
@@ -69,7 +72,7 @@ All direct packages had the latest version on 2026-11-18. The `overrides` entry 
 
 ## 5. IPC
 
-- Calls with an answer: `sessions:scan`, `sessions:search`, `agents:list`, `agents:transcript`, `usage:read`, `hooks:status`, `hooks:install`, `dialog:pickFolder`, `app:defaultFolder` and `pty:attach` and `update:get`.
+- Calls with an answer: `sessions:scan`, `sessions:search`, `agents:list`, `agents:transcript`, `shells:list`, `shells:output`, `usage:read`, `hooks:status`, `hooks:install`, `dialog:pickFolder`, `app:defaultFolder` and `pty:attach` and `update:get`.
 - One call that the preload makes at start and waits for: `app:home`. It returns the home folder from the operating system, not from the `HOME` variable. A shell can set `HOME` to a path style that Windows does not use.
 - Messages without an answer: `tabs:setOpen`, `app:openExternal`, `app:openFolder`, `badge:set`, `theme:menu`, `pty:write`, `pty:resize`, `pty:kill`, `windows:undock`, `windows:dock`, `windows:nextDisplay` and `windows:setTitle`.
 - Events to the pages: `pty:data`, `pty:exit`, `windows:docked-back`, `windows:reveal` and `update:available`.
@@ -110,6 +113,7 @@ The scripts run with the real `node` that the login shell finds. Without Node, t
 
 - A scan of 59 sessions takes about 20 ms. It takes 3 ms for unchanged files. Hive caches titles by file time.
 - Hive reads the session folder every 1.5 seconds and the usage file every 5 seconds. The main process reads the status files every second.
+- The agent and shell list of an open session refreshes every 2 seconds. The transcript of an open agent and the output of an open shell refresh every 1.5 seconds.
 - The agent list of an open session refreshes every 2 seconds. The transcript of an open agent refreshes every 1.5 seconds.
 
 ## 11. Build and run
@@ -119,7 +123,7 @@ The scripts run with the real `node` that the login shell finds. Without Node, t
 - A new install of Electron resets this change. The next `npm run dev` sets it again.
 - After the start, the interface reloads hot. If you change a file with the app state, the page reloads and the tabs come back.
 - `npm run dev:watch` also restarts the whole app after a change in the main process. A restart ends all terminals. Do not use it for Hive inside Hive.
-- `npm test` runs 100 unit tests. They cover the placement rules, the font size, the tab reorder, the saved session, formatting, the scanner, the search, the paths, the link rules, the agent transcripts and the agent list, the status and usage files, the merge of the hook settings, the update check, and the version rules of the releases (also against a real git repository).
+- `npm test` runs 118 unit tests. They cover the placement rules, the font size, the tab reorder, the saved session, formatting, the scanner, the search, the paths, the link rules, the agent transcripts and the agent list, the status and usage files, the merge of the hook settings, the update check, and the version rules of the releases (also against a real git repository).
 - `npm run test:e2e` builds the app and runs the end-to-end tests. They start the real app, so they need a screen. See section 12.3.
 - `npm run typecheck`, `npm run lint`, `npm run build` and `npm run dist` (an installer for the current system, with a draft version, see section 14.1) are also available. `npm run lint:fix` formats the code and applies the safe fixes.
 - The installers are not signed with a trusted certificate, because none exists. Section 14 has the details. On macOS, open the app with a right click and "Open".

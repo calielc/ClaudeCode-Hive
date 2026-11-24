@@ -4,10 +4,10 @@ import type { AgentSummary, TranscriptEntry } from "@shared/types";
 import { endsWithAnswer, lastModel, parseTranscript } from "./agent-transcript";
 import { projectDirectory } from "./paths";
 
-const STALE_MS = 15 * 60 * 1000;
-const MAX_BYTES = 6 * 1024 * 1024;
+export const STALE_MS = 15 * 60 * 1000;
+export const MAX_BYTES = 6 * 1024 * 1024;
 /** Session ids and agent ids are letters, digits and dashes. Anything else could point outside the session folder. */
-const SAFE_ID = /^[A-Za-z0-9-]+$/;
+export const SAFE_ID = /^[A-Za-z0-9-]+$/;
 
 type Json = Record<string, unknown>;
 

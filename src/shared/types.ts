@@ -17,6 +17,16 @@ export interface AgentSummary {
   updated: number;
 }
 
+/** A background shell that a session started, running or done. */
+export interface ShellSummary {
+  id: string;
+  description: string;
+  command: string;
+  running: boolean;
+  /** When the transcript last named this shell, in milliseconds. For a finished shell, this is about when it ended. */
+  updated: number;
+}
+
 /** One readable item of an agent transcript. */
 export type TranscriptEntry =
   | { kind: "prompt" | "text" | "thinking"; text: string }
@@ -133,6 +143,12 @@ export interface HiveApi {
       sessionId: string,
       agentId: string,
     ): Promise<TranscriptEntry[]>;
+  };
+  shells: {
+    /** The background shells that a session started, in the order they first appear. */
+    list(folder: string, sessionId: string): Promise<ShellSummary[]>;
+    /** The last part of the output of one shell. */
+    output(folder: string, sessionId: string, shellId: string): Promise<string>;
   };
   /** The number of sessions that wait for the user, and a PNG data URL of the badge to show on the taskbar. */
   setWaitingCount(count: number, badge: string): void;
