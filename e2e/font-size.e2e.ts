@@ -28,12 +28,46 @@ async function changeFontSize(page: Page, steps: number): Promise<void> {
   }, steps);
 }
 
-/** One notch of the mouse wheel over the first pane, with the modifier key down. */
+/** The pixels of one font size step: 100 for a mouse wheel on Windows and Linux, 20 on macOS. */
+const STEP_PIXELS = process.platform === "darwin" ? 20 : 100;
+
+/** One notch of the mouse wheel (a delta of 100 means one step) over the first pane, with the modifier key down. */
 async function wheel(page: Page, deltaY: number): Promise<void> {
   await page.locator(".pane-body").first().hover();
   await page.keyboard.down(modifier);
-  await page.mouse.wheel(0, deltaY);
+  await page.mouse.wheel(0, (deltaY / 100) * STEP_PIXELS);
   await page.keyboard.up(modifier);
+}
+
+/**
+ * Sends synthetic wheel events over the first pane. A real mouse wheel gives whole pixels only, and the events here carry
+ * fractions like a Mac trackpad or a pinch does.
+ */
+async function sendWheel(
+  page: Page,
+  count: number,
+  deltaY: number,
+  keys: { ctrlKey: boolean; metaKey: boolean },
+): Promise<void> {
+  await page.locator(".pane-body").first().hover();
+  await page.evaluate(
+    ({ times, delta, ctrlKey, metaKey }) => {
+      const target = document.querySelector(".pane-body") as HTMLElement;
+      for (let i = 0; i < times; i++) {
+        target.dispatchEvent(
+          new WheelEvent("wheel", {
+            deltaY: delta,
+            deltaMode: 0,
+            ctrlKey,
+            metaKey,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      }
+    },
+    { times: count, delta: deltaY, ...keys },
+  );
 }
 
 describe("the font size of the terminals", () => {
@@ -83,6 +117,40 @@ describe("the font size of the terminals", () => {
       assert.equal((await hive.state()).fontSize, 8),
     );
     await changeFontSize(page, 5);
+    await eventually(async () =>
+      assert.equal((await hive.state()).fontSize, 13),
+    );
+  });
+
+  test("small wheel movements like a Mac sends change the size by the steps of the platform", async () => {
+    const { page } = hive;
+    // 14 events of 1.5 pixels are 21 pixels. A step is 20 pixels on macOS and 100 pixels on Windows and Linux.
+    const notch = process.platform === "darwin" ? 20 : 100;
+    const expected = Math.trunc((14 * 1.5) / notch);
+    await page.keyboard.down(modifier);
+    await sendWheel(page, 14, -1.5, {
+      ctrlKey: modifier === "Control",
+      metaKey: modifier === "Meta",
+    });
+    await page.keyboard.up(modifier);
+    await page.waitForTimeout(300);
+    await eventually(async () =>
+      assert.equal((await hive.state()).fontSize, 13 + expected),
+    );
+    await changeFontSize(page, -expected);
+    await eventually(async () =>
+      assert.equal((await hive.state()).fontSize, 13),
+    );
+  });
+
+  test("a pinch with small fractional movements changes the size", async () => {
+    const { page } = hive;
+    // A pinch has ctrlKey true and no key down of Control. 40 events of 0.5 pixels are 20 pixels, and a step is 8 pixels.
+    await sendWheel(page, 40, -0.5, { ctrlKey: true, metaKey: false });
+    await eventually(async () =>
+      assert.equal((await hive.state()).fontSize, 15),
+    );
+    await changeFontSize(page, -2);
     await eventually(async () =>
       assert.equal((await hive.state()).fontSize, 13),
     );
