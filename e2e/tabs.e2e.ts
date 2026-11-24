@@ -348,3 +348,49 @@ describe("the tab bar with many tabs", () => {
     );
   });
 });
+
+describe("a middle click on a tab", () => {
+  let hive: Hive;
+
+  before(async () => {
+    hive = await launchHive();
+  });
+  after(async () => {
+    await hive.close();
+  });
+
+  test("closes the tab and puts its session back in the list", async () => {
+    const { page } = hive;
+    await row(page, "Fix login flow").click();
+    await tab(page, "Fix login flow").waitFor();
+    await row(page, "Write release notes").click();
+    await tab(page, "Write release notes").waitFor();
+
+    await tab(page, "Fix login flow").click({ button: "middle" });
+
+    await eventually(async () =>
+      assert.equal(await tab(page, "Fix login flow").count(), 0),
+    );
+    await row(page, "Fix login flow").waitFor();
+    assert.equal(await tab(page, "Write release notes").count(), 1);
+  });
+
+  test("does not close the tab when the middle click is on a button of the tab", async () => {
+    const { page } = hive;
+    const tabsBefore = (await hive.state()).tabs.length;
+    await tab(page, "Write release notes")
+      .locator('.tab-close[title="Undock into its own window"]')
+      .click({ button: "middle" });
+    await page.waitForTimeout(300);
+    assert.equal(await tab(page, "Write release notes").count(), 1);
+    assert.equal((await hive.state()).tabs.length, tabsBefore);
+    assert.deepEqual((await hive.state()).detached, []);
+  });
+
+  test("keeps the tab open on a left click", async () => {
+    const { page } = hive;
+    await tab(page, "Write release notes").click();
+    await page.waitForTimeout(300);
+    assert.equal(await tab(page, "Write release notes").count(), 1);
+  });
+});
