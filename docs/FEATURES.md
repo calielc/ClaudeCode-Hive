@@ -125,5 +125,6 @@ Eight colors mark sessions: red, orange, yellow, green, teal, blue, purple and p
 - Hide or show the left panel: Cmd+B on macOS and Ctrl+B on other systems.
 - Font size of the terminals: Ctrl and the mouse wheel (Cmd and the wheel also work on macOS). See section 3.
 - Copy, cut and paste: Ctrl+C, Ctrl+X and Ctrl+V work on every system. On macOS, Cmd+C, Cmd+X and Cmd+V also work. A terminal cannot cut, so cut copies. Ctrl+C and Ctrl+X without a selection still go to Claude Code. If an image is on the clipboard, paste goes to Claude Code as its own image paste key (Ctrl+V, and Alt+V on Windows).
+- New line in a prompt: Shift+Enter, Ctrl+Enter, Alt+Enter and Cmd+Enter add a line to the prompt of Claude Code and do not submit it. Hive sends Escape and Enter for these keys on macOS and Linux, which is the new line key of Claude Code. On Windows it sends a backslash and Enter, because the terminal layer there rewrites Escape and Enter. Enter alone submits.
 - Cards, session rows, agent rows and tabs take the keyboard focus. Tab moves the focus between them. Enter or Space does what a click does. A ring shows the focused item.
 - Plain Shift+Tab goes to Claude Code. The code is in `src/renderer/shortcuts.ts`.
