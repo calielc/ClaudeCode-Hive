@@ -4,10 +4,14 @@ import { card, eventually, type Hive, launchHive, row } from "./app";
 import { IDS } from "./fixture";
 
 // The fake command echoes what it receives as JSON. On macOS and Linux the terminal line turns a carriage return into a
-// line feed. On Windows it can arrive as a carriage return, so the end of the line is any of the three forms.
-// Escape then Enter is the new line key of Claude Code, and Enter alone submits.
-const NEW_LINE = /echo:"\\u001b(?:\\r\\n|\\r|\\n)"/g;
-const SUBMIT = /echo:"(?:\\r\\n|\\r|\\n)"/g;
+// line feed. On Windows a carriage return stays a carriage return, and Enter can come back as both, so the end of the line
+// is any of the three forms. Claude Code reads Escape and Enter as a new line. On Windows Hive sends a backslash and Enter
+// instead, because the terminal layer there rewrites Escape and Enter. Enter alone submits.
+const END = String.raw`(?:\\r\\n|\\r|\\n)`;
+const START =
+  process.platform === "win32" ? String.raw`\\\\` : String.raw`\\u001b`;
+const NEW_LINE = new RegExp(`echo:"${START}${END}"`, "g");
+const SUBMIT = new RegExp(`echo:"${END}"`, "g");
 
 function count(text: string, needle: RegExp): number {
   return text.match(needle)?.length ?? 0;
@@ -36,7 +40,7 @@ describe("the keys that add a line to a prompt", () => {
       const submitsBefore = count(await text(), SUBMIT);
       await hive.page.keyboard.press(combo);
       await eventually(async () =>
-        assert.equal(count(await text(), NEW_LINE), newLinesBefore + 1, JSON.stringify((await text()).slice(-400))),
+        assert.equal(count(await text(), NEW_LINE), newLinesBefore + 1),
       );
       assert.equal(count(await text(), SUBMIT), submitsBefore);
     });

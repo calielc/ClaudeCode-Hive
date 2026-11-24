@@ -111,7 +111,7 @@ export function createEntry(
   term.attachCustomKeyEventHandler((event) => {
     if (isNewLineKey(event)) {
       event.preventDefault();
-      term.input(NEW_LINE);
+      term.input(newLine());
       return false;
     }
     const handled = clipboardKey(term, event);
@@ -130,8 +130,14 @@ export function createEntry(
   return entry;
 }
 
-/** Claude Code reads Escape and Enter as a new line in the prompt. A terminal sends a plain Enter for Shift+Enter and Ctrl+Enter, which submits. */
-const NEW_LINE = "\x1b\r";
+/**
+ * Claude Code reads Escape and Enter as a new line in the prompt. A terminal sends a plain Enter for Shift+Enter and Ctrl+Enter, which submits.
+ * On Windows the terminal layer (ConPTY) turns Escape and Enter into a plain Enter, so Hive sends a backslash and Enter there.
+ * That is the sequence that the terminal setup of Claude Code binds to Shift+Enter, and the layer does not rewrite it.
+ */
+function newLine(): string {
+  return window.hive?.platform === "win32" ? "\\\r" : "\x1b\r";
+}
 
 /** Shift, Ctrl, Alt or Cmd with Enter. Only the key press counts, and an Enter that confirms an input method does not. */
 function isNewLineKey(event: KeyboardEvent): boolean {
