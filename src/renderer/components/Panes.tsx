@@ -24,7 +24,7 @@ import { CAPACITY, type LayoutMode } from "../panes";
 import { setState, useStore } from "../state";
 import { fitEntry, getEntry, mountEntry, unmountEntry } from "../terminals";
 import { tagColor } from "../themes";
-import { AgentTranscript } from "./AgentView";
+import { SidePaneView } from "./AgentView";
 import { pressable } from "./a11y";
 import { endOfListProps, reorderProps } from "./reorder";
 
@@ -410,10 +410,10 @@ function Pane({ index }: { index: number }) {
       {/* biome-ignore lint/a11y/noStaticElementInteractions: A pointer-only surface. The keys have their own handlers elsewhere. */}
       <div className="pane-body" onMouseDown={() => selectPane(index)}>
         {agentId ? (
-          <AgentTranscript
+          <SidePaneView
             folder={tab.folder}
             sessionId={tabId}
-            agentId={agentId}
+            selection={agentId}
           />
         ) : (
           <TerminalHost tabId={tabId} />

@@ -21,6 +21,7 @@ import { hooksStatus, installHooks } from "./hooks";
 import { PtyManager } from "./pty";
 import { searchSessions } from "./search";
 import { scan } from "./sessions";
+import { listShells, readShellOutput } from "./shells";
 import { readUsage, readWaitingInfo, StatusMonitor } from "./status";
 import { RELEASES_URL, UpdateChecker } from "./update-check";
 
@@ -316,6 +317,14 @@ function registerIpc(): void {
     "agents:transcript",
     (_event, folder: string, sessionId: string, agentId: string) =>
       readAgentTranscript(folder, sessionId, agentId),
+  );
+  ipcMain.handle("shells:list", (_event, folder: string, sessionId: string) =>
+    listShells(folder, sessionId),
+  );
+  ipcMain.handle(
+    "shells:output",
+    (_event, folder: string, sessionId: string, shellId: string) =>
+      readShellOutput(folder, sessionId, shellId),
   );
   ipcMain.on("badge:set", (_event, count: number, badge: string) => {
     if (

@@ -41,6 +41,12 @@ const api: HiveApi = {
     transcript: (folder, sessionId, agentId) =>
       ipcRenderer.invoke("agents:transcript", folder, sessionId, agentId),
   },
+  shells: {
+    list: (folder, sessionId) =>
+      ipcRenderer.invoke("shells:list", folder, sessionId),
+    output: (folder, sessionId, shellId) =>
+      ipcRenderer.invoke("shells:output", folder, sessionId, shellId),
+  },
   setWaitingCount: (count, badge) =>
     ipcRenderer.send("badge:set", count, badge),
   openFolder: (path) => ipcRenderer.send("app:openFolder", path),
