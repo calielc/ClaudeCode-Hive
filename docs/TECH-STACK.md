@@ -40,7 +40,7 @@ All direct packages had the latest version on 2026-11-18. The `overrides` entry 
 - `src/renderer/state.ts`: the store with the state shape, `setState`, `useStore` and the saving.
 - `src/renderer/actions.ts`: all actions, the polling, the search and the tab operations.
 - `src/renderer/terminals.ts`: one xterm for each session, with mount, fit, replay, links and the clipboard keys.
-- `src/renderer/font-size.ts`: the limits of the font size, and the rule that turns wheel movement into steps. `main.tsx` listens for Ctrl and the wheel in every window, and `applyFontSize` in `terminals.ts` gives all terminals the size.
+- `src/renderer/font-size.ts`: the limits of the font size, and the rule that turns wheel movement into steps, with one named notch for each kind of input (wheel, macOS wheel and pinch). `main.tsx` listens for Ctrl and the wheel in every window, and it tracks whether a real Control key is held to tell a pinch from a wheel, and `applyFontSize` in `terminals.ts` gives all terminals the size.
 - `src/renderer/session-persist.ts`: saves and restores the open tabs across a page reload.
 - `src/renderer/badge.ts`: draws the badge image for the number of waiting sessions.
 - `src/renderer/components/`: `Sidebar`, `Panes` (top bar, tabs, panes, splitters), `AgentView` (agent list and transcript), `ContextMenu`, `UndockedView`, `reorder` and `a11y`.
@@ -119,7 +119,7 @@ The scripts run with the real `node` that the login shell finds. Without Node, t
 - A new install of Electron resets this change. The next `npm run dev` sets it again.
 - After the start, the interface reloads hot. If you change a file with the app state, the page reloads and the tabs come back.
 - `npm run dev:watch` also restarts the whole app after a change in the main process. A restart ends all terminals. Do not use it for Hive inside Hive.
-- `npm test` runs 94 unit tests. They cover the placement rules, the font size, the tab reorder, the saved session, formatting, the scanner, the search, the paths, the link rules, the agent transcripts and the agent list, the status and usage files, the merge of the hook settings, the update check, and the version rules of the releases (also against a real git repository).
+- `npm test` runs 100 unit tests. They cover the placement rules, the font size, the tab reorder, the saved session, formatting, the scanner, the search, the paths, the link rules, the agent transcripts and the agent list, the status and usage files, the merge of the hook settings, the update check, and the version rules of the releases (also against a real git repository).
 - `npm run test:e2e` builds the app and runs the end-to-end tests. They start the real app, so they need a screen. See section 12.3.
 - `npm run typecheck`, `npm run lint`, `npm run build` and `npm run dist` (an installer for the current system, with a draft version, see section 14.1) are also available. `npm run lint:fix` formats the code and applies the safe fixes.
 - The installers are not signed with a trusted certificate, because none exists. Section 14 has the details. On macOS, open the app with a right click and "Open".
