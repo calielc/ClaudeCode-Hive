@@ -216,6 +216,11 @@ export function mountEntry(entry: TerminalEntry, container: HTMLElement): void {
   // and the session must start anyway.
   setTimeout(() => {
     fitEntry(entry);
+    if (entry.started) {
+      // Another window may have changed the size of the process while this terminal was away, for example an undocked window.
+      // The terminal keeps its own columns and rows, so no resize event comes. Tell the process the size again.
+      window.hive.pty.resize(entry.id, entry.term.cols, entry.term.rows);
+    }
     void start(entry);
   }, 0);
 }
@@ -314,6 +319,14 @@ export function focusEntry(id: string): void {
 /** The font size that a terminal draws with. Used by tests. */
 export function terminalFontSize(id: string): number | undefined {
   return entries.get(id)?.term.options.fontSize;
+}
+
+/** The columns and rows of a terminal. Used by tests. */
+export function terminalSize(
+  id: string,
+): { cols: number; rows: number } | undefined {
+  const term = entries.get(id)?.term;
+  return term ? { cols: term.cols, rows: term.rows } : undefined;
 }
 
 /** The text on the screen and in the scrollback of a terminal. Used by tests. */

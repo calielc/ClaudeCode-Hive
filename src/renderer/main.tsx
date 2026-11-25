@@ -8,6 +8,7 @@ import {
   applyFontSize,
   pointOf,
   terminalFontSize,
+  terminalSize,
   terminalText,
 } from "./terminals";
 import "./styles.css";
@@ -65,6 +66,7 @@ if (window.hive.debug) {
     getState,
     terminalText,
     terminalFontSize,
+    terminalSize,
     pointOf,
   };
 }

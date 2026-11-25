@@ -557,3 +557,122 @@ hiveTest(
     assert.deepEqual((await hive.state()).detached, [IDS.search]);
   },
 );
+
+/** The size of the pane body and of the text area of the terminal in it, in pixels. */
+function paneAndScreen(page: Page): Promise<{
+  pane: { width: number; height: number };
+  screen: { width: number; height: number };
+}> {
+  return page.evaluate(() => {
+    const pane = (
+      document.querySelector(".terminal-container") as HTMLElement
+    ).getBoundingClientRect();
+    const screen = (
+      document.querySelector(".terminal-container .xterm-screen") as HTMLElement
+    ).getBoundingClientRect();
+    return {
+      pane: { width: pane.width, height: pane.height },
+      screen: { width: screen.width, height: screen.height },
+    };
+  });
+}
+
+/** The text area must fill the pane, except for less than one character cell on each side. */
+async function assertFillsPane(page: Page): Promise<void> {
+  await eventually(async () => {
+    const { pane, screen } = await paneAndScreen(page);
+    assert.ok(
+      pane.width - screen.width < 30 && pane.height - screen.height < 40,
+      `terminal ${screen.width}x${screen.height} in a pane of ${pane.width}x${pane.height}`,
+    );
+  });
+}
+
+/** The size that the process of a session was told last, read from the last `size:` line that the fake command printed. */
+async function processSize(page: Page, id: string): Promise<string | null> {
+  const text = await page.evaluate(
+    (sessionId) =>
+      (
+        window as unknown as { __hive: { terminalText(id: string): string } }
+      ).__hive.terminalText(sessionId),
+    id,
+  );
+  const sizes = [...text.matchAll(/^size:(\d+x\d+)$/gm)];
+  return sizes.at(-1)?.[1] ?? null;
+}
+
+/** The terminal and its process must have the same size. A stale process size makes the program draw in a part of the pane. */
+async function assertProcessMatches(page: Page, id: string): Promise<void> {
+  await eventually(async () => {
+    const size = await page.evaluate(
+      (sessionId) =>
+        (
+          window as unknown as {
+            __hive: {
+              terminalSize(id: string): { cols: number; rows: number };
+            };
+          }
+        ).__hive.terminalSize(sessionId),
+      id,
+    );
+    assert.equal(
+      await processSize(page, id),
+      `${size.cols}x${size.rows}`,
+      "process size differs from the terminal size",
+    );
+  });
+}
+
+/** Makes every window but the main one small, like a user who drags an undocked window to a small size. */
+async function shrinkWindows(hive: Hive): Promise<void> {
+  await hive.app.evaluate(
+    ({ BrowserWindow }, mainTitle) => {
+      for (const window of BrowserWindow.getAllWindows()) {
+        if (window.getTitle() !== mainTitle) {
+          window.setSize(500, 300);
+        }
+      }
+    },
+    await hive.page.title(),
+  );
+  await hive.page.waitForTimeout(500);
+}
+
+hiveTest(
+  "the terminal fills the pane again after undock and dock with the Dock button",
+  async (hive) => {
+    await assertFillsPane(hive.page);
+    const window = await undockTab(hive, NOTES);
+    await shrinkWindows(hive);
+    await window.locator(".xterm-rows").first().waitFor();
+    await eventually(async () =>
+      assert.equal(await tab(hive.page, NOTES).count(), 0),
+    );
+    await clickDock(window);
+    await eventually(async () =>
+      assert.deepEqual(await barTitles(hive.page), [LOGIN, SEARCH, NOTES]),
+    );
+    await assertFillsPane(hive.page);
+    await assertProcessMatches(hive.page, IDS.plain);
+  },
+);
+
+hiveTest(
+  "the terminal fills the pane again after undock and dock with the card menu",
+  async (hive) => {
+    await undockTab(hive, NOTES);
+    await shrinkWindows(hive);
+    await eventually(async () =>
+      assert.equal(await tab(hive.page, NOTES).count(), 0),
+    );
+    await card(hive.page, NOTES).click({ button: "right" });
+    await hive.page
+      .locator(".menu .menu-item", { hasText: "Dock into the main window" })
+      .click();
+    await eventually(async () =>
+      assert.deepEqual(await barTitles(hive.page), [LOGIN, SEARCH, NOTES]),
+    );
+    await assertFillsPane(hive.page);
+    await assertProcessMatches(hive.page, IDS.plain);
+  },
+);
