@@ -514,7 +514,7 @@ button {
 
 .usage-row {
   display: grid;
-  grid-template-columns: 62px 1fr 34px 52px;
+  grid-template-columns: 62px 1fr 34px 52px 12px;
   align-items: center;
   gap: 6px;
   margin: 3px 0;
@@ -549,6 +549,24 @@ button {
   height: 100%;
   border-radius: 3px;
   transition: width 0.3s;
+}
+
+.usage-forecast {
+  text-align: center;
+  line-height: 1;
+  cursor: default;
+}
+
+.usage-forecast[data-level="green"] {
+  color: #4dbf66;
+}
+
+.usage-forecast[data-level="yellow"] {
+  color: #f79433;
+}
+
+.usage-forecast[data-level="red"] {
+  color: #eb4d4d;
 }
 
 .usage-note {
