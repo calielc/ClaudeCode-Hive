@@ -80,7 +80,10 @@ interface WakeupData {
 
 type Data = MonitorData | CronData | WakeupData;
 
-const cache = new Map<string, { modified: number; rows: Data[] }>();
+const cache = new Map<
+  string,
+  { modified: number; size: number; rows: Data[] }
+>();
 
 function text(value: unknown): string {
   return typeof value === "string" ? value : "";
@@ -287,7 +290,8 @@ function parseRows(raw: string): Data[] {
 async function loadRows(file: string): Promise<Data[]> {
   const info = await stat(file);
   const cached = cache.get(file);
-  if (cached && cached.modified === info.mtimeMs) {
+  // A file that changes twice within one tick of the clock keeps its time, so the size is part of the key.
+  if (cached && cached.modified === info.mtimeMs && cached.size === info.size) {
     return cached.rows;
   }
   let raw = await readFile(file, "utf8");
@@ -297,7 +301,7 @@ async function loadRows(file: string): Promise<Data[]> {
     raw = raw.slice(raw.indexOf("\n") + 1);
   }
   const rows = parseRows(raw);
-  cache.set(file, { modified: info.mtimeMs, rows });
+  cache.set(file, { modified: info.mtimeMs, size: info.size, rows });
   return rows;
 }
 
