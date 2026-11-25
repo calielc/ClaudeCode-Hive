@@ -4,7 +4,7 @@ import { createEntry, focusEntry } from "../terminals";
 import { themeNamed } from "../themes";
 import { TerminalHost } from "./Panes";
 
-/** The content of an undocked window: one terminal and two buttons. */
+/** The content of an undocked window: one terminal and a Dock button. */
 export function UndockedView({ id, title }: { id: string; title: string }) {
   const themeName = useStore((state) => state.themeName);
   // The terminal must exist before the child component mounts it, so it is made while rendering.
@@ -24,12 +24,6 @@ export function UndockedView({ id, title }: { id: string; title: string }) {
     <div className="undocked" data-theme={themeName}>
       <div className="undocked-bar">
         <span className="pane-title">{title}</span>
-        <button
-          type="button"
-          onClick={() => window.hive.windows.nextDisplay(id)}
-        >
-          Next display
-        </button>
         <button type="button" onClick={() => window.hive.windows.dock(id)}>
           Dock
         </button>

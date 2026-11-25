@@ -134,6 +134,73 @@ test("Ctrl+Tab cycles forwards and backwards and wraps", () => {
   assert.equal(cycle(withTabs("single", "a"), false), null);
 });
 
+test("Ctrl+Tab skips a tab in its own window", () => {
+  let state = withTabs("single", "a", "b", "c", "d");
+  state = detach(state, "b");
+  state = detach(state, "c");
+  assert.equal(cycle(activate(state, "a"), false), "d");
+  assert.equal(cycle(activate(state, "d"), false), "a");
+  assert.equal(cycle(activate(state, "a"), true), "d");
+  assert.equal(cycle(activate(state, "d"), true), "a");
+});
+
+test("Ctrl+Tab from a selected tab in its own window goes to the first or last docked tab", () => {
+  let state = withTabs("single", "a", "b", "c");
+  state = detach(state, "b");
+  state = activate(state, "b");
+  assert.equal(state.selectedTabId, "b");
+  assert.equal(cycle(state, false), "a");
+  assert.equal(cycle(state, true), "c");
+});
+
+test("Ctrl+Tab does nothing when fewer than two tabs are docked", () => {
+  let state = withTabs("single", "a", "b", "c");
+  state = detach(state, "b");
+  state = detach(state, "c");
+  assert.equal(cycle(state, false), null);
+  assert.equal(cycle(state, true), null);
+  state = detach(state, "a");
+  assert.equal(cycle(state, false), null);
+});
+
+test("undocking the selected tab selects the docked tab that takes its pane", () => {
+  let state = withTabs("single", "a", "b", "c");
+  state = activate(state, "b");
+  state = detach(state, "b");
+  assert.ok(state.selectedTabId !== "b");
+  assert.ok(state.selectedTabId === "a" || state.selectedTabId === "c");
+  assert.equal(state.selectedTabId, state.slots[state.activePane]);
+  assert.deepEqual(state.tabIds, ["a", "b", "c"]);
+  assert.deepEqual(state.detached, ["b"]);
+});
+
+test("undocking a tab that is not selected keeps the selection", () => {
+  let state = withTabs("single", "a", "b", "c");
+  state = activate(state, "a");
+  state = detach(state, "c");
+  assert.equal(state.selectedTabId, "a");
+});
+
+test("undocking the last docked tab leaves no selected tab and no pane session", () => {
+  let state = withTabs("sideBySide", "a", "b");
+  state = detach(state, "a");
+  state = detach(state, "b");
+  assert.equal(state.selectedTabId, null);
+  assert.deepEqual(visible(state), [null, null]);
+  assert.deepEqual(state.tabIds, ["a", "b"]);
+  assert.deepEqual(state.detached, ["a", "b"]);
+});
+
+test("docking back keeps the tab order and selects the tab", () => {
+  let state = withTabs("single", "a", "b", "c");
+  state = detach(state, "b");
+  state = dockBack(state, "b");
+  assert.deepEqual(state.tabIds, ["a", "b", "c"]);
+  assert.deepEqual(state.detached, []);
+  assert.equal(state.selectedTabId, "b");
+  assert.equal(state.slots[0], "b");
+});
+
 test("a tab moves before or after another tab", () => {
   const state = withTabs("single", "a", "b", "c", "d");
   assert.deepEqual(moveTab(state, "d", "a", false).tabIds, [

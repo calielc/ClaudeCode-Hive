@@ -15,6 +15,7 @@ export interface HiveState {
   layout: string;
   tabs: { id: string; title: string }[];
   slots: (string | null)[];
+  tabIds: string[];
   tags: Record<string, string>;
   detached: string[];
   agentViews: Record<string, string | null>;

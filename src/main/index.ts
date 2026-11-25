@@ -25,10 +25,15 @@ import { scan } from "./sessions";
 import { listShells, readShellOutput } from "./shells";
 import { readUsage, readWaitingInfo, StatusMonitor } from "./status";
 import { RELEASES_URL, UpdateChecker } from "./update-check";
+import { closedWindowAction } from "./window-close";
 
 const isMac = process.platform === "darwin";
 const mainWindows = new Set<BrowserWindow>();
 const undocked = new Map<string, BrowserWindow>();
+/** Ids of undocked windows that a dock request is closing. A close without a request closes the session. */
+const dockRequests = new Set<string>();
+/** True once the app quits, so the windows that close with it do not close their sessions. */
+let quitting = false;
 let openTabs: OpenTabRef[] = [];
 
 function iconPath(): string {
@@ -152,26 +157,6 @@ function createMainWindow(): BrowserWindow {
   return window;
 }
 
-function nextScreenPosition(window: BrowserWindow): void {
-  const displays = screen.getAllDisplays();
-  if (displays.length < 2) {
-    return;
-  }
-  const current = screen.getDisplayMatching(window.getBounds());
-  const index = displays.findIndex((display) => display.id === current.id);
-  const target = displays[(index + 1) % displays.length]?.workArea;
-  if (!target) {
-    return;
-  }
-  const { width, height } = window.getBounds();
-  window.setBounds({
-    x: Math.round(target.x + (target.width - width) / 2),
-    y: Math.round(target.y + (target.height - height) / 2),
-    width,
-    height,
-  });
-}
-
 function undock(id: string, title: string): void {
   const existing = undocked.get(id);
   if (existing) {
@@ -201,7 +186,13 @@ function undock(id: string, title: string): void {
   }
   window.on("closed", () => {
     undocked.delete(id);
-    broadcast("windows:docked-back", id);
+    const dockRequested = dockRequests.delete(id);
+    const action = closedWindowAction(quitting, dockRequested);
+    if (action === "dock") {
+      broadcast("windows:docked-back", id);
+    } else if (action === "close") {
+      broadcast("windows:closed", id);
+    }
   });
   loadRenderer(window, `/terminal/${id}?title=${encodeURIComponent(title)}`);
 }
@@ -397,11 +388,11 @@ function registerIpc(): void {
   ipcMain.on("windows:undock", (_event, id: string, title: string) =>
     undock(id, title),
   );
-  ipcMain.on("windows:dock", (_event, id: string) => undocked.get(id)?.close());
-  ipcMain.on("windows:nextDisplay", (_event, id: string) => {
+  ipcMain.on("windows:dock", (_event, id: string) => {
     const window = undocked.get(id);
     if (window) {
-      nextScreenPosition(window);
+      dockRequests.add(id);
+      window.close();
     }
   });
   ipcMain.on("windows:setTitle", (_event, id: string, title: string) =>
@@ -541,6 +532,7 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
+  quitting = true;
   monitor.stop();
   updates?.stop();
   ptys.killAll();

@@ -190,8 +190,9 @@ export interface HiveApi {
   windows: {
     undock(id: string, title: string): void;
     dock(id: string): void;
-    nextDisplay(id: string): void;
     onDockedBack(listener: (id: string) => void): () => void;
+    /** The user closed an undocked window itself, so its session is closed. */
+    onClosed(listener: (id: string) => void): () => void;
     onReveal(listener: (id: string) => void): () => void;
     /** Ctrl+Tab and Ctrl+Shift+Tab, caught by the main process before the page sees the key. */
     onCycleTabs(listener: (backwards: boolean) => void): () => void;

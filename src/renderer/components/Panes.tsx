@@ -20,7 +20,7 @@ import {
   toggleSidebar,
   undock,
 } from "../actions";
-import { CAPACITY, type LayoutMode } from "../panes";
+import { CAPACITY, type LayoutMode, visibleTabs } from "../panes";
 import { setState, useStore } from "../state";
 import { fitEntry, getEntry, mountEntry, unmountEntry } from "../terminals";
 import { tagColor } from "../themes";
@@ -224,7 +224,7 @@ function TabBar() {
   // The bar scrolls sideways only when the tabs do not fit. Its scroll stops at the ends.
   return (
     <div className="tabs" ref={bar} {...endOfListProps()}>
-      {tabs.map((tab) => {
+      {visibleTabs(tabs, detached).map((tab) => {
         const pane = slots.indexOf(tab.id);
         const color = tagColor(tags[tab.id]);
         return (
@@ -240,7 +240,6 @@ function TabBar() {
             onDoubleClick={(event: MouseEvent) => {
               if (
                 layout === "single" ||
-                detached.includes(tab.id) ||
                 (event.target as HTMLElement).closest("button")
               ) {
                 return;
@@ -277,9 +276,6 @@ function TabBar() {
               });
             }}
           >
-            {detached.includes(tab.id) && (
-              <span title="In its own window">▣</span>
-            )}
             {layout !== "single" && pane >= 0 && pane < CAPACITY[layout] && (
               <span className="pane-badge">{pane + 1}</span>
             )}
@@ -287,19 +283,17 @@ function TabBar() {
               className={`dot ${openSessions.find((item) => item.id === tab.id)?.state ?? "ready"}`}
             />
             <span className="tab-title">{tab.title}</span>
-            {!detached.includes(tab.id) && (
-              <button
-                type="button"
-                className="tab-close"
-                title="Undock into its own window"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  undock(tab.id);
-                }}
-              >
-                ⇱
-              </button>
-            )}
+            <button
+              type="button"
+              className="tab-close"
+              title="Undock into its own window"
+              onClick={(event) => {
+                event.stopPropagation();
+                undock(tab.id);
+              }}
+            >
+              ⇱
+            </button>
             <button
               type="button"
               className="tab-close"

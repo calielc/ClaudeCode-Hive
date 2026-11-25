@@ -187,7 +187,8 @@ describe("sessions, tabs and panes", () => {
       assert.deepEqual((await hive.state()).detached, [IDS.login]);
     });
     await card(page, "Fix login flow").locator(".window-mark").waitFor();
-    // The undock button is gone from a tab in its own window.
+    // A session in its own window has no tab in the top bar, so it has no undock button either.
+    assert.equal(await tab(page, "Fix login flow").count(), 0);
     assert.equal(
       await tab(page, "Fix login flow")
         .locator('.tab-close[title="Undock into its own window"]')
@@ -197,11 +198,20 @@ describe("sessions, tabs and panes", () => {
 
     const other = app.windows().find((window) => window !== page);
     assert.ok(other);
-    await other.close();
+    // The click closes the window, so Playwright can report the closed page while the click ends. That is the wanted result.
+    await other
+      .getByRole("button", { name: "Dock", exact: true })
+      .click()
+      .catch((error: unknown) => {
+        if (!String(error).includes("has been closed")) {
+          throw error;
+        }
+      });
     await eventually(async () => {
       assert.equal(app.windows().length, 1);
       assert.deepEqual((await hive.state()).detached, []);
     });
+    await tab(page, "Fix login flow").waitFor();
   });
 });
 
@@ -282,13 +292,15 @@ describe("a double click on a tab", () => {
     assert.deepEqual(state.detached, []);
   });
 
-  test("does what a click does for a tab in its own window", async () => {
+  test("a click on the card of a session in its own window does not switch the layout", async () => {
     const { page, app } = hive;
     await tab(page, "Write release notes")
       .locator('.tab-close[title="Undock into its own window"]')
       .click();
     await eventually(async () => assert.equal(app.windows().length, 2));
-    await tab(page, "Write release notes").dblclick();
+    // The session has no tab in the top bar now. Its card in the left panel is what a click can reach.
+    assert.equal(await tab(page, "Write release notes").count(), 0);
+    await card(page, "Write release notes").click();
     await page.waitForTimeout(300);
     assert.equal((await hive.state()).layout, "sideBySide");
     const other = app.windows().find((window) => window !== page);

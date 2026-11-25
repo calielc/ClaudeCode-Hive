@@ -175,8 +175,21 @@ export function setLayout(state: PaneState, layout: LayoutMode): PaneState {
   return normalize({ ...state, layout, slots, activePane });
 }
 
+/** The tabs that the top bar shows: every tab that is not in its own window, in tab order. */
+export function visibleTabs<T extends { id: string }>(
+  tabs: readonly T[],
+  detached: readonly string[],
+): T[] {
+  return tabs.filter((tab) => !detached.includes(tab.id));
+}
+
+/** The tab moves to its own window. If it was selected, the docked tab that now fills the active pane is selected. */
 export function detach(state: PaneState, id: string): PaneState {
-  return normalize({ ...state, detached: [...state.detached, id] });
+  const next = normalize({ ...state, detached: [...state.detached, id] });
+  if (state.selectedTabId !== id) {
+    return next;
+  }
+  return { ...next, selectedTabId: next.slots[next.activePane] ?? null };
 }
 
 /** Back in the main window: into an empty pane, or else into the active pane. */
@@ -190,15 +203,16 @@ export function dockBack(state: PaneState, id: string): PaneState {
     : show(next, id, next.activePane);
 }
 
-/** Ctrl+Tab goes to the next tab, Ctrl+Shift+Tab to the previous one. It wraps around. */
+/** Ctrl+Tab goes to the next docked tab, Ctrl+Shift+Tab to the previous one. It wraps around and skips tabs in their own window. */
 export function cycle(state: PaneState, backwards: boolean): string | null {
-  if (state.tabIds.length < 2) {
+  const ids = docked(state);
+  if (ids.length < 2) {
     return null;
   }
-  const current = state.tabIds.indexOf(state.selectedTabId ?? "");
+  const current = ids.indexOf(state.selectedTabId ?? "");
   const start = current === -1 ? (backwards ? 0 : -1) : current;
-  const count = state.tabIds.length;
-  return state.tabIds[(start + (backwards ? -1 : 1) + count) % count] ?? null;
+  const count = ids.length;
+  return ids[(start + (backwards ? -1 : 1) + count) % count] ?? null;
 }
 
 /** Moves a tab to just before or just after another tab. The panes keep their sessions. */

@@ -25,6 +25,7 @@ All direct packages had the latest version on 2026-11-18. The `overrides` entry 
 
 ## 3. Files
 
+- `src/main/window-close.ts`: decides what happens when an undocked window has closed. A dock request docks the tab again (`windows:docked-back`). Any other close closes the session (`windows:closed`). Quitting does nothing. The main process records a dock request in a set before it closes the window, and sets the quit flag in `before-quit`.
 - `src/main/index.ts`: app start, windows, undock, menu, tray, IPC handlers, notifications and test seams.
 - `src/main/sessions.ts`: scans the session files and reads the titles and the details of open sessions.
 - `src/main/agents.ts`: lists the agents of a session and reads the transcript of one agent.
@@ -65,7 +66,7 @@ All direct packages had the latest version on 2026-11-18. The `overrides` entry 
 - Agents: `<session-id>/subagents/agent-*.meta.json` has `agentType`, `description` and sometimes `finished`. The matching `.jsonl` gives the transcript and the model.
 - Done agent: an agent is done when `finished` is true, or when its last message is an answer with no tool call. An agent whose transcript is quiet for 15 minutes also counts as done. The interface hides a done agent 30 minutes after the last change.
 - Shells: the transcript `<session-id>.jsonl` holds a `task_status` line for each shell, with `taskType` `local_bash`, `taskId`, `description`, `shell.command` and `outputFilePath`. A `<task-notification>` line with the same `<task-id>` marks the end. Hive reads only the last 6 MB of the transcript. A shell is done after its end note, or when the transcript is quiet for 15 minutes. The interface hides a done shell 30 minutes after its last line.
-- Background tasks: the transcript holds a `Monitor`, `CronCreate`, `CronDelete`, `TaskStop` or `ScheduleWakeup` tool call, and its result starts or ends the task. A `<task-notification>` user entry with an `<event>` is an event of a monitor. Hive reads only the last 6 MB, caches the parsed tasks by file and modification time, and works out the status and the note from the clock on every call.
+- Background tasks: the transcript holds a `Monitor`, `CronCreate`, `CronDelete`, `TaskStop` or `ScheduleWakeup` tool call, and its result starts or ends the task. A `<task-notification>` user entry with an `<event>` is an event of a monitor. Hive reads only the last 6 MB, caches the parsed tasks by file, modification time and size, and works out the status and the note from the clock on every call.
 - Shell output: Hive never reads a path that the renderer sends. The renderer sends the folder, the session id and the shell id. Main takes the path from the transcript and reads it only when its last four segments are the project folder name, the session id, `tasks` and `<shell id>.output`, and when it is a regular file, not a link. It returns the last 512 KB, cut at a line start.
 - State of a session: `~/.claude-sessions/status/<session-id>.json` with `{"state":"working|waiting|ready","ts":...}`. The hooks write it. For a waiting session, the file also holds the `message` and the `type` of the question.
 - Usage: `~/.claude-sessions/usage.json` with `five_hour`, `seven_day` (`used_percentage` and `resets_at` in seconds) and `model_scoped`. The status line wrapper writes it.
@@ -76,8 +77,8 @@ All direct packages had the latest version on 2026-11-18. The `overrides` entry 
 
 - Calls with an answer: `sessions:scan`, `sessions:search`, `agents:list`, `agents:transcript`, `shells:list`, `shells:output`, `background:list`, `background:detail`, `usage:read`, `hooks:status`, `hooks:install`, `dialog:pickFolder`, `app:defaultFolder` and `pty:attach` and `update:get`.
 - One call that the preload makes at start and waits for: `app:home`. It returns the home folder from the operating system, not from the `HOME` variable. A shell can set `HOME` to a path style that Windows does not use.
-- Messages without an answer: `tabs:setOpen`, `app:openExternal`, `app:openFolder`, `badge:set`, `theme:menu`, `pty:write`, `pty:resize`, `pty:kill`, `windows:undock`, `windows:dock`, `windows:nextDisplay` and `windows:setTitle`.
-- Events to the pages: `pty:data`, `pty:exit`, `windows:docked-back`, `windows:reveal` and `update:available`.
+- Messages without an answer: `tabs:setOpen`, `app:openExternal`, `app:openFolder`, `badge:set`, `theme:menu`, `pty:write`, `pty:resize`, `pty:kill`, `windows:undock`, `windows:dock` and `windows:setTitle`.
+- Events to the pages: `pty:data`, `pty:exit`, `windows:docked-back`, `windows:closed`, `windows:reveal` and `update:available`.
 
 ## 6. Terminal lifecycle
 
@@ -124,7 +125,7 @@ The scripts run with the real `node` that the login shell finds. Without Node, t
 - A new install of Electron resets this change. The next `npm run dev` sets it again.
 - After the start, the interface reloads hot. If you change a file with the app state, the page reloads and the tabs come back.
 - `npm run dev:watch` also restarts the whole app after a change in the main process. A restart ends all terminals. Do not use it for Hive inside Hive.
-- `npm test` runs 257 unit tests. They cover the placement rules, the font size, the width of the left panel, the usage forecast and bar color, the tab reorder, the saved session, formatting, the scanner, the search, the paths, the link rules, the agent transcripts and the agent list, the background tasks and the cron schedule, the status and usage files, the merge of the hook settings, the update check, and the version rules of the releases (also against a real git repository).
+- `npm test` runs 276 unit tests. They cover the placement rules, the font size, the width of the left panel, the usage forecast and bar color, the tab reorder, the saved session, formatting, the scanner, the search, the paths, the link rules, the agent transcripts and the agent list, the background tasks and the cron schedule, the status and usage files, the merge of the hook settings, the update check, and the version rules of the releases (also against a real git repository).
 - `npm run test:e2e` builds the app and runs the end-to-end tests. They start the real app, so they need a screen. See section 12.3.
 - `npm run typecheck`, `npm run lint`, `npm run build` and `npm run dist` (an installer for the current system, with a draft version, see section 14.1) are also available. `npm run lint:fix` formats the code and applies the safe fixes.
 - The installers are not signed with a trusted certificate, because none exists. Section 14 has the details. On macOS, open the app with a right click and "Open".
