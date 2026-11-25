@@ -380,7 +380,11 @@ for (const zone of ["UTC", "Europe/Amsterdam"]) {
 
     describe("the forecast of the week window", () => {
       // Week of Monday 10 to Monday 17 March, from 09:00 to 09:00. It holds 40h of work.
-      const reset = local(3, 17, 9);
+      // The reset is set in a hook, after the outer hook has switched the zone. A value made while the block is defined would use the zone of the process.
+      let reset = 0;
+      before(() => {
+        reset = local(3, 17, 9);
+      });
 
       test("runs out before the reset when the work pace is too fast", () => {
         // Wednesday 12th 13:00: elapsed Monday and Tuesday 16h + Wednesday 4h = 20h, and the remaining work is 20h as well.
