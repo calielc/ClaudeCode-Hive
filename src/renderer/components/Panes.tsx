@@ -467,8 +467,8 @@ export function PaneLayout() {
   const splitY = useStore((state) => state.splitY);
   const container = useRef<HTMLDivElement>(null);
   const evenSize = EVEN_GRID[layout];
-  const columns = `${splitX}fr 8px ${1 - splitX}fr`;
-  const rows = `${splitY}fr 8px ${1 - splitY}fr`;
+  const columns = `${splitX}fr 4px ${1 - splitX}fr`;
+  const rows = `${splitY}fr 4px ${1 - splitY}fr`;
   const cell = (row: number, column: number): React.CSSProperties => ({
     gridRow: row,
     gridColumn: column,
