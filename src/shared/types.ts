@@ -27,6 +27,19 @@ export interface ShellSummary {
   updated: number;
 }
 
+/** A Claude Code background task of a session: a monitor, a cron job or a wake-up. Its transcript holds all of its data. */
+export interface BackgroundSummary {
+  /** The kind, a colon and the task id, for example `monitor:b094clax3`. */
+  id: string;
+  kind: "monitor" | "cron" | "wakeup";
+  title: string;
+  status: "running" | "ended";
+  /** The last time the transcript named this task, in milliseconds. For an ended task, this is when it ended. */
+  updatedAt: number;
+  /** A short state text, for example `3 events` or `next run 10:01`. */
+  note: string;
+}
+
 /** One readable item of an agent transcript. */
 export type TranscriptEntry =
   | { kind: "prompt" | "text" | "thinking"; text: string }
@@ -149,6 +162,16 @@ export interface HiveApi {
     list(folder: string, sessionId: string): Promise<ShellSummary[]>;
     /** The last part of the output of one shell. */
     output(folder: string, sessionId: string, shellId: string): Promise<string>;
+  };
+  background: {
+    /** The monitors, cron jobs and wake-ups of a session, in the order they first appear. */
+    list(folder: string, sessionId: string): Promise<BackgroundSummary[]>;
+    /** The detail text of one background task, or null when it is unknown. */
+    detail(
+      folder: string,
+      sessionId: string,
+      id: string,
+    ): Promise<string | null>;
   };
   /** The number of sessions that wait for the user, and a PNG data URL of the badge to show on the taskbar. */
   setWaitingCount(count: number, badge: string): void;

@@ -16,6 +16,7 @@ import {
   Tray,
 } from "electron";
 import { listAgents, readAgentTranscript } from "./agents";
+import { listBackground, readBackgroundDetail } from "./background";
 import { isAppUrl, isOpenable } from "./external-url";
 import { hooksStatus, installHooks } from "./hooks";
 import { PtyManager } from "./pty";
@@ -325,6 +326,16 @@ function registerIpc(): void {
     "shells:output",
     (_event, folder: string, sessionId: string, shellId: string) =>
       readShellOutput(folder, sessionId, shellId),
+  );
+  ipcMain.handle(
+    "background:list",
+    (_event, folder: string, sessionId: string) =>
+      listBackground(folder, sessionId),
+  );
+  ipcMain.handle(
+    "background:detail",
+    (_event, folder: string, sessionId: string, id: string) =>
+      readBackgroundDetail(folder, sessionId, id),
   );
   ipcMain.on("badge:set", (_event, count: number, badge: string) => {
     if (

@@ -205,6 +205,152 @@ export function writeShell(
   setAge(transcript, 0);
 }
 
+/** Appends transcript entries to the transcript of a session and keeps it fresh. Build the entries with the `bg*` helpers below. */
+export function writeBackground(
+  fixture: Fixture,
+  sessionId: string,
+  entries: unknown[],
+): void {
+  const transcript = join(fixture.projectDirectory, `${sessionId}.jsonl`);
+  appendFileSync(transcript, `${entries.map(line).join("\n")}\n`);
+  setAge(transcript, 0);
+}
+
+function bgCall(at: number, id: string, name: string, input: unknown): unknown {
+  return {
+    type: "assistant",
+    timestamp: new Date(at).toISOString(),
+    message: {
+      role: "assistant",
+      content: [{ type: "tool_use", id, name, input }],
+    },
+  };
+}
+
+function bgResult(
+  at: number,
+  id: string,
+  content: string,
+  isError = false,
+): unknown {
+  return {
+    type: "user",
+    timestamp: new Date(at).toISOString(),
+    message: {
+      role: "user",
+      content: [
+        {
+          type: "tool_result",
+          tool_use_id: id,
+          content,
+          ...(isError ? { is_error: true } : {}),
+        },
+      ],
+    },
+  };
+}
+
+/** The start of a monitor: the call and its result. `expiresMin: null` is a persistent monitor. */
+export function bgMonitorStart(spec: {
+  task: string;
+  description: string;
+  command?: string;
+  expiresMin?: number | null;
+  at?: number;
+}): unknown[] {
+  const at = spec.at ?? Date.now();
+  const toolId = `toolu_m_${spec.task}`;
+  const expiry =
+    spec.expiresMin === null
+      ? "runs until the source ends"
+      : `expires in ${spec.expiresMin ?? 10}m unless the source ends first; you get one notice at expiry`;
+  return [
+    bgCall(at, toolId, "Monitor", {
+      command: spec.command ?? "tail -f app.log",
+      description: spec.description,
+    }),
+    bgResult(
+      at + 100,
+      toolId,
+      `Monitor started (task ${spec.task}, ${expiry}). You will be notified on each event. Keep working — do not poll or sleep.`,
+    ),
+  ];
+}
+
+/** One event of a monitor, as the notification entry and the queue-operation copy that Claude Code writes. */
+export function bgMonitorEvent(
+  task: string,
+  event: string,
+  at = Date.now(),
+): unknown[] {
+  const content = `<task-notification>\n<task-id>${task}</task-id>\n<summary>Monitor event: "x"</summary>\n<event>${event}</event>\nIf this event is something the user would act on now, send a PushNotification.\n</task-notification>`;
+  return [
+    {
+      type: "user",
+      timestamp: new Date(at).toISOString(),
+      message: { role: "user", content },
+    },
+    {
+      type: "queue-operation",
+      operation: "enqueue",
+      timestamp: new Date(at).toISOString(),
+      content,
+    },
+  ];
+}
+
+export function bgMonitorStop(task: string, at = Date.now()): unknown[] {
+  const toolId = `toolu_stop_${task}`;
+  return [
+    bgCall(at, toolId, "TaskStop", { task_id: task }),
+    bgResult(at + 100, toolId, `Task ${task} stopped.`),
+  ];
+}
+
+export function bgCronCreate(spec: {
+  job: string;
+  cron: string;
+  prompt: string;
+  recurring: boolean;
+  at?: number;
+}): unknown[] {
+  const at = spec.at ?? Date.now();
+  const toolId = `toolu_c_${spec.job}`;
+  const text = spec.recurring
+    ? `Scheduled recurring job ${spec.job} (${spec.cron}). Next run: soon. Session-only (not written to disk, dies when Claude exits). Auto-expires after 7 days. Use CronDelete to cancel sooner.`
+    : `Scheduled one-shot task ${spec.job} (${spec.cron}). Next run: soon. Session-only (not written to disk, dies when Claude exits). It will fire once then auto-delete.`;
+  return [
+    bgCall(at, toolId, "CronCreate", {
+      cron: spec.cron,
+      prompt: spec.prompt,
+      recurring: spec.recurring,
+    }),
+    bgResult(at + 100, toolId, text),
+  ];
+}
+
+export function bgWakeup(spec: {
+  id: string;
+  seconds: number;
+  reason: string;
+  prompt?: string;
+  at?: number;
+}): unknown[] {
+  const at = spec.at ?? Date.now();
+  return [
+    bgCall(at, spec.id, "ScheduleWakeup", {
+      delaySeconds: spec.seconds,
+      reason: spec.reason,
+      prompt: spec.prompt ?? "<<autonomous-loop-dynamic>>",
+    }),
+    bgResult(
+      at + 100,
+      spec.id,
+      `Next wakeup scheduled for 11:49:00 (in ${spec.seconds}s). If you owe the user a reply, send it now.`,
+    ),
+  ];
+}
+
 /**
  * Four sessions in the folder that Hive lists at the start:
  * "Fix login flow" works, "Refactor search" waits, "Write release notes" is ready, and "Old idea" is three days old.
