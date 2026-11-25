@@ -601,8 +601,12 @@ async function processSize(page: Page, id: string): Promise<string | null> {
   return sizes.at(-1)?.[1] ?? null;
 }
 
-/** The terminal and its process must have the same size. A stale process size makes the program draw in a part of the pane. */
+/**
+ * The terminal and its process must have the same size. A stale process size makes the program draw in a part of the pane.
+ * On Windows, Node does not report a resize of the console to the fake command, so only the size of the terminal is checked there.
+ */
 async function assertProcessMatches(page: Page, id: string): Promise<void> {
+  if (process.platform === "win32") return;
   await eventually(async () => {
     const size = await page.evaluate(
       (sessionId) =>
