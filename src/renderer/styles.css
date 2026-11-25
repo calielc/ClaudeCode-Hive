@@ -945,6 +945,16 @@ button {
   line-height: 1;
 }
 
+.agent-note {
+  flex: none;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.agent-row.done:not(.active) .agent-note {
+  opacity: 0.75;
+}
+
 .agent-model {
   flex: none;
   color: var(--muted);

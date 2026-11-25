@@ -1,5 +1,6 @@
 import type {
   AgentSummary,
+  BackgroundSummary,
   ShellSummary,
   TranscriptEntry,
 } from "@shared/types";
@@ -72,7 +73,26 @@ export function useShells(folder: string, sessionId: string): ShellSummary[] {
   );
 }
 
+/** The monitors, cron jobs and wake-ups of a session. It stays empty for a session without them. */
+export function useBackground(
+  folder: string,
+  sessionId: string,
+): BackgroundSummary[] {
+  return usePolled(
+    () => window.hive.background.list(folder, sessionId),
+    [],
+    2000,
+    `${folder}|${sessionId}`,
+  );
+}
+
 const SHELL_PREFIX = "shell:";
+const BACKGROUND_PREFIXES = ["monitor:", "cron:", "wakeup:"];
+const BACKGROUND_ICONS: Record<BackgroundSummary["kind"], string> = {
+  monitor: "◉",
+  cron: "⏲",
+  wakeup: "⏰",
+};
 
 /** The shell that a selection names, or null for an agent. Agent ids never hold a colon. */
 function shellIdOf(selection: string): string | null {
@@ -84,13 +104,15 @@ function shellIdOf(selection: string): string | null {
 /** One row of the list, for an agent or a shell. `key` is what the pane selection holds. */
 interface Item {
   key: string;
-  kind: "agent" | "shell";
+  kind: "agent" | "shell" | BackgroundSummary["kind"];
   description: string;
   title: string;
   icon: string;
   model?: string;
   running: boolean;
   updated: number;
+  /** A short state text, for a background task. */
+  note?: string;
 }
 
 function agentItem(agent: AgentSummary): Item {
@@ -122,10 +144,23 @@ function shellItem(shell: ShellSummary): Item {
   };
 }
 
+function backgroundItem(task: BackgroundSummary): Item {
+  return {
+    key: task.id,
+    kind: task.kind,
+    description: task.title,
+    title: task.note ? `${task.title}: ${task.note}` : task.title,
+    icon: BACKGROUND_ICONS[task.kind],
+    running: task.status === "running",
+    updated: task.updatedAt,
+    note: task.note,
+  };
+}
+
 /**
- * The agents and the background shells of a session as rows on its card in the left panel. The first row is Main, the session itself. Every other row is an
- * agent or a shell. A click on an agent shows its transcript in the pane of the session, a click on a shell shows its output, and a
- * click on Main shows the terminal. Running rows and the open one always show. Finished rows fold behind a "+N done" row, and a cross
+ * The agents, the background shells and the background tasks of a session as rows on its card in the left panel. The first row is Main, the session itself. Every other row is an
+ * agent, a shell or a background task (a monitor, a cron job or a wake-up). A click on an agent shows its transcript in the pane of the session, a click on a shell shows its output, a click on a
+ * background task shows its detail, and a click on Main shows the terminal. Running rows and the open one always show. Finished rows fold behind a "+N done" row, and a cross
  * hides one.
  */
 export function AgentList({
@@ -140,7 +175,8 @@ export function AgentList({
   const now = Date.now();
   const agentItems = useAgents(folder, tabId).map(agentItem);
   const shellItems = useShells(folder, tabId).map(shellItem);
-  const agents = [...agentItems, ...shellItems].filter(
+  const backgroundItems = useBackground(folder, tabId).map(backgroundItem);
+  const agents = [...agentItems, ...shellItems, ...backgroundItems].filter(
     (item) =>
       item.running || item.key === selected || now - item.updated < EXPIRE_MS,
   );
@@ -187,7 +223,7 @@ export function AgentList({
         <div
           key={agent.key}
           className={`agent-row ${selected === agent.key ? "active" : ""} ${agent.running ? "" : "done"}`}
-          data-kind={agent.kind === "shell" ? "shell" : undefined}
+          data-kind={agent.kind === "agent" ? undefined : agent.kind}
           title={agent.title}
           onClick={() => choose(agent.key)}
           {...pressable(() => choose(agent.key))}
@@ -195,6 +231,7 @@ export function AgentList({
           <i className={`dot ${agent.running ? "working" : "ready"}`} />
           <span className="agent-type">{agent.icon}</span>
           <span className="agent-name">{agent.description}</span>
+          {agent.note && <span className="agent-note">{agent.note}</span>}
           {agent.model && (
             <span className="agent-model">{shortModelName(agent.model)}</span>
           )}
@@ -250,6 +287,11 @@ export function SidePaneView({
   sessionId: string;
   selection: string;
 }) {
+  if (BACKGROUND_PREFIXES.some((prefix) => selection.startsWith(prefix))) {
+    return (
+      <BackgroundDetail folder={folder} sessionId={sessionId} id={selection} />
+    );
+  }
   const shellId = shellIdOf(selection);
   return shellId === null ? (
     <AgentTranscript
@@ -284,6 +326,35 @@ function ShellOutput({
       {output === "" && <div className="agent-empty">Nothing to show yet.</div>}
       <pre className="shell-output" data-testid="shell-output">
         {output}
+      </pre>
+    </div>
+  );
+}
+
+/** The detail text of one background task. It reads the transcript again while the pane is open. */
+function BackgroundDetail({
+  folder,
+  sessionId,
+  id,
+}: {
+  folder: string;
+  sessionId: string;
+  id: string;
+}) {
+  const detail = usePolled(
+    () => window.hive.background.detail(folder, sessionId, id),
+    null,
+    1500,
+    `${folder}|${sessionId}|${id}`,
+  );
+  const { box, onScroll } = useFollowEnd(detail);
+  return (
+    <div className="agent-transcript" ref={box} onScroll={onScroll}>
+      {detail === null && (
+        <div className="agent-empty">Nothing to show yet.</div>
+      )}
+      <pre className="shell-output" data-testid="background-detail">
+        {detail ?? ""}
       </pre>
     </div>
   );
