@@ -23,6 +23,8 @@ import {
 } from "../format";
 import { setState, useStore } from "../state";
 import { tagColor } from "../themes";
+import { usageColor } from "../usage-color";
+import { forecastUsage, type UsageForecast } from "../usage-forecast";
 import { AgentList } from "./AgentView";
 import { pressable } from "./a11y";
 import { reorderProps } from "./reorder";
@@ -434,6 +436,32 @@ function resetTitle(
   return `${rolledOver ? "Reset on" : "Resets on"} ${when}`;
 }
 
+const WORK_WEEK_NOTE = " (based on a 5 day, 8 hour work week)";
+
+/** The tooltip of the forecast icon, which tells what the current pace means. */
+function forecastText(
+  forecast: UsageForecast,
+  label: string,
+  now: number,
+): string {
+  const note = label.startsWith("Week") ? WORK_WEEK_NOTE : "";
+  if (forecast.kind === "lasts") {
+    return `On pace for ${forecast.percentAtReset}% at the reset${note}`;
+  }
+  if (forecast.msLeft === 0) {
+    return `Limit reached${note}`;
+  }
+  return `Runs out in ${countdown(now + forecast.msLeft, now)} (before the reset)${note}`;
+}
+
+/** Red when the limit runs out, yellow when the pace ends at 85% or more, green below that. */
+function forecastLevel(forecast: UsageForecast): "red" | "yellow" | "green" {
+  if (forecast.kind === "runs-out") {
+    return "red";
+  }
+  return forecast.percentAtReset >= 85 ? "yellow" : "green";
+}
+
 function UsageBars() {
   const usage = useStore((state) => state.usage);
   const hooks = useStore((state) => state.hooks);
@@ -454,14 +482,8 @@ function UsageBars() {
         // A window that has already reset has no known usage until the next update.
         const rolledOver = window.resetsAt !== null && window.resetsAt < now;
         const percent = rolledOver ? null : window.percent;
-        const color =
-          percent === null
-            ? "#888"
-            : percent >= 85
-              ? "#eb4d4d"
-              : percent >= 60
-                ? "#f79433"
-                : "#4dbf66";
+        const color = usageColor(percent);
+        const forecast = rolledOver ? null : forecastUsage(window, now);
         return (
           <div
             className="usage-row"
@@ -484,6 +506,19 @@ function UsageBars() {
             <span className="usage-reset">
               {rolledOver ? "reset" : countdown(window.resetsAt, now)}
             </span>
+            {forecast && (
+              <span
+                className="usage-forecast"
+                data-testid="usage-forecast"
+                data-kind={forecast.kind}
+                data-level={forecastLevel(forecast)}
+                title={forecastText(forecast, window.label, now)}
+                aria-label={forecastText(forecast, window.label, now)}
+                role="img"
+              >
+                ●
+              </span>
+            )}
           </div>
         );
       })}
