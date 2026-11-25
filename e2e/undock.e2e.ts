@@ -45,7 +45,20 @@ function hiveTest(name: string, body: (hive: Hive) => Promise<void>): void {
 
 /** The command lines of the running processes of one session. Empty when the process is gone. */
 function sessionProcesses(id: string): string[] {
-  return execFileSync("ps", ["-axo", "command"], { encoding: "utf8" })
+  // Windows has no `ps`, so it asks for the command lines of the processes through PowerShell.
+  const listing =
+    process.platform === "win32"
+      ? execFileSync(
+          "powershell",
+          [
+            "-NoProfile",
+            "-Command",
+            "Get-CimInstance Win32_Process | ForEach-Object { $_.CommandLine }",
+          ],
+          { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
+        )
+      : execFileSync("ps", ["-axo", "command"], { encoding: "utf8" });
+  return listing
     .split("\n")
     .filter((line) => line.includes(`fake-claude.cjs ${id}`));
 }
@@ -85,6 +98,17 @@ async function windowOf(hive: Hive, title: string): Promise<Page> {
 
 function dockButton(window: Page) {
   return window.getByRole("button", { name: "Dock", exact: true });
+}
+
+/** Clicks Dock. The click closes the window, so Playwright can report the closed page while the click ends. That is the wanted result. */
+async function clickDock(window: Page): Promise<void> {
+  await dockButton(window)
+    .click()
+    .catch((error: unknown) => {
+      if (!String(error).includes("has been closed")) {
+        throw error;
+      }
+    });
 }
 
 /** Calls an action of the test seam `window.__hive`. */
@@ -149,7 +173,7 @@ hiveTest(
       await eventually(async () =>
         assert.equal(await tab(page, title).count(), 0),
       );
-      await dockButton(window).click();
+      await clickDock(window);
       await eventually(async () => {
         assert.deepEqual(await barTitles(page), [LOGIN, SEARCH, NOTES]);
         assert.deepEqual((await hive.state()).detached, []);
@@ -297,7 +321,7 @@ hiveTest(
       assert.deepEqual((await hive.state()).detached, [IDS.login]);
       assert.equal(app.windows().length, 2);
     });
-    await dockButton(loginWindow).click();
+    await clickDock(loginWindow);
     await eventually(async () => {
       assert.deepEqual(await barTitles(page), [LOGIN, NOTES]);
       assert.deepEqual((await hive.state()).detached, []);
@@ -315,7 +339,7 @@ hiveTest(
   "the Dock button keeps the session alive and its process running",
   async (hive) => {
     const window = await undockTab(hive, SEARCH);
-    await dockButton(window).click();
+    await clickDock(window);
     await eventually(async () =>
       assert.deepEqual(await barTitles(hive.page), [LOGIN, SEARCH, NOTES]),
     );
@@ -387,7 +411,7 @@ hiveTest(
     assert.equal(await page.locator(".card").count(), 3);
     assert.equal(await page.locator(".card .window-mark").count(), 3);
 
-    await dockButton(windows[SEARCH] as Page).click();
+    await clickDock(windows[SEARCH] as Page);
     await eventually(async () =>
       assert.deepEqual(await barTitles(page), [SEARCH]),
     );
