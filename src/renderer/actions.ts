@@ -15,6 +15,7 @@ import {
   setLayout as setLayoutState,
   show,
 } from "./panes";
+import { clampSidebarWidth, DEFAULT_SIDEBAR_WIDTH } from "./sidebar-width";
 import { getState, setState, type Tab } from "./state";
 import {
   applyTheme,
@@ -173,6 +174,14 @@ export function focusSearch(): void {
 /** Hides the left panel, or shows it again. */
 export function toggleSidebar(): void {
   setState((current) => ({ sidebarHidden: !current.sidebarHidden }));
+}
+
+export function setSidebarWidth(width: number): void {
+  setState({ sidebarWidth: clampSidebarWidth(width) });
+}
+
+export function resetSidebarWidth(): void {
+  setSidebarWidth(DEFAULT_SIDEBAR_WIDTH);
 }
 
 export function setLayout(layout: LayoutMode): void {

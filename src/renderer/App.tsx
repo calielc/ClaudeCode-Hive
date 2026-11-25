@@ -12,6 +12,7 @@ import { drawBadge } from "./badge";
 import { ContextMenu } from "./components/ContextMenu";
 import { PaneLayout, TopBar } from "./components/Panes";
 import { Sidebar } from "./components/Sidebar";
+import { SidebarSplitter } from "./components/SidebarSplitter";
 import { UndockedView } from "./components/UndockedView";
 import { shortcutFor } from "./shortcuts";
 import { useStore } from "./state";
@@ -43,6 +44,7 @@ function MainView() {
   );
   const hasTabs = useStore((state) => state.tabs.length > 0);
   const sidebarHidden = useStore((state) => state.sidebarHidden);
+  const sidebarWidth = useStore((state) => state.sidebarWidth);
   const started = useRef(false);
 
   useEffect(() => {
@@ -103,10 +105,14 @@ function MainView() {
       className={`app ${sidebarHidden ? "sidebar-hidden" : ""}`}
       data-theme={themeName}
       style={
-        { "--pane-bg": themeNamed(themeName).background } as React.CSSProperties
+        {
+          "--pane-bg": themeNamed(themeName).background,
+          "--sidebar-width": `${sidebarWidth}px`,
+        } as React.CSSProperties
       }
     >
       <Sidebar />
+      {!sidebarHidden && <SidebarSplitter />}
       <main className="main">
         <TopBar />
         {hasTabs ? (

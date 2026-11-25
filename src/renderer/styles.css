@@ -43,7 +43,8 @@ button {
 
 .app {
   display: grid;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: var(--sidebar-width, 320px) 1fr;
+  position: relative;
   height: 100%;
 }
 
@@ -54,6 +55,21 @@ button {
 
 .app.sidebar-hidden .sidebar {
   display: none;
+}
+
+/* The splitter floats over the edge of the panel. It takes no grid column, so the main area has no gap. */
+.sidebar-splitter {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--sidebar-width) - 3px);
+  width: 6px;
+  z-index: 3;
+  cursor: col-resize;
+}
+
+.sidebar-splitter:hover {
+  background: rgba(91, 140, 255, 0.35);
 }
 
 /* Sidebar */
@@ -1021,6 +1037,7 @@ button {
 }
 
 .splitter {
+  position: relative;
   align-self: stretch;
   justify-self: stretch;
   flex: 1;
@@ -1033,6 +1050,20 @@ button {
 
 .splitter-y {
   cursor: row-resize;
+}
+
+/* The track is 4 pixels. The invisible overlay makes the grab area wider. */
+.splitter::before {
+  content: "";
+  position: absolute;
+}
+
+.splitter-x::before {
+  inset: 0 -4px;
+}
+
+.splitter-y::before {
+  inset: -4px 0;
 }
 
 .splitter:hover {
