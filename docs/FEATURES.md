@@ -30,7 +30,7 @@ From the top: the folder menu and the search field, the counts of working, waiti
 - **Card content.** A card shows the state dot, the name and the age. It shows a chip for the repository (the folder that holds `.git`), a chip for the branch, and a chip for the model, for example "Sonnet 5.5". The three chips are on one line. Then the card shows the agent list (see section 3) and the last prompt in two lines.
 - **Card marks.** A window icon marks a session in its own window. A blue ring marks the selected card. A thin orange or red border marks a session that works or waits.
 - **State dots.** An orange dot that pulses means working. A red dot means waiting for you. A green dot means ready.
-- **Right-click menu.** The menu sets the color of every session. For an open session, it also has these items: go to tab, undock or dock, close tab.
+- **Right-click menu.** The menu sets the color of every session. For an open session, it also has these items: go to tab, undock or dock, close tab (for a session in its own window, it closes the window and the session).
 - **Usage footer.** See section 8.
 
 With the left panel hidden, the panes use the full width. The picture shows four sessions in the grid layout. Each session has its own color tag.
@@ -47,7 +47,7 @@ Four sessions in the grid layout. The blue ring marks the selected pane.
 - **Layouts.** The layouts are single, 1×2 (side by side), 2×1 (stacked), 2×2, 3×3 and 4×4. A button at the top right shows the current layout as a small picture. A click opens a list of pictures, and each one has a tooltip with its name. Hive saves the layout. You can drag the dividers between panes in the layouts up to 2×2. The dividers are thin (4 pixels), but the area that you can grab is wider. Hive saves their positions. The 3×3 and 4×4 layouts have equal panes.
 - **Waiting pulse.** In every layout except single, the border of a pane pulses red while its session waits for you.
 - **Selected pane.** A blue ring marks the selected pane. It gets the next session that you pick. A click in a pane selects it.
-- **Tab bar.** Each tab shows the pane number in a split layout, the state dot, the name, a button to undock, and a close button. A window icon marks an undocked tab. The bar scrolls sideways only when the tabs do not fit. Its scroll stops at the ends. The selected tab scrolls into view. A double click on a tab in a split layout switches to the single layout and shows that tab in the pane. In the single layout it changes nothing. A double click on a button of the tab, or on a tab in its own window, does nothing extra. A middle click on a tab closes it, the same as the close button. A middle click on a button of the tab does nothing.
+- **Tab bar.** Each tab shows the pane number in a split layout, the state dot, the name, a button to undock, and a close button. The bar lists docked tabs only. A tab in its own window has no tab in the bar. The bar scrolls sideways only when the tabs do not fit. Its scroll stops at the ends. The selected tab scrolls into view. A double click on a tab in a split layout switches to the single layout and shows that tab in the pane. In the single layout it changes nothing. A double click on a button of the tab does nothing extra. A middle click on a tab closes it, the same as the close button. A middle click on a button of the tab does nothing.
 - **New session.** The "New Session" button starts a session in the selected folder. It sits right after the last tab, because a new session opens as the last tab. When the tabs do not fit, they scroll and the button stays in view. The keys for this are in section 10.
 - **Process exit.** After Claude ends, for example after `/exit`, the tab closes. A process that fails within 3 seconds keeps its tab. Then the error stays readable.
 - **Agent list.** The card of an open session lists its agents under the chips. The first row is Main, the session itself. Each other row is an agent. It shows an icon for the type of the agent, the description, and the model. A session without agents shows no list. A list of more than about five rows scrolls inside the card.
@@ -71,18 +71,18 @@ These rules are the most important behavior. Pure functions in `src/renderer/pan
 
 1. A click on a visible tab (tab bar, left panel or Ctrl+Tab) selects its pane only. Nothing moves. The divider sizes stay the same.
 2. A click on a hidden tab replaces the session in the selected pane. The replaced session stays open in the tab bar.
-3. A click on a tab in its own window selects the tab. It brings the window to the front.
+3. A click on the card of a session in its own window selects it and brings the window to the front. It does not dock the session and does not change the layout.
 4. A new session goes into the selected pane if that pane is empty. Otherwise it goes into the first empty pane. If no pane is empty, it replaces the session in the selected pane.
 5. When you switch to a split layout, the current session stays first (left or top). The other panes fill with the next tabs in tab order. The order wraps around at the end.
 6. When you switch to a smaller layout and the selected pane disappears, its session goes to the first pane.
 7. When you close a visible tab, its pane fills with the next hidden tab. A pane stays empty only when no hidden tab is left.
 8. When you drop a session on a pane (drag from the left panel or the tab bar), the session goes into that pane. A visible tab swaps places with the current tab of the pane. A tab in its own window docks into the pane.
-9. When you undock a tab, it leaves its pane and a hidden tab fills the pane. When you dock a tab, it goes into an empty pane. If no pane is empty, it goes into the selected pane.
+9. When you undock a tab, it leaves the tab bar and its pane, and a hidden docked tab fills the pane. If it was selected, the docked tab in the selected pane becomes selected. When you dock a tab, it returns to its place in the tab bar and goes into an empty pane. If no pane is empty, it goes into the selected pane. Ctrl+Tab skips tabs in their own window.
 10. You can drag a tab, or a card in the Open section, onto another one. It lands before or after the target, by the half where you drop. A line shows the place. A drop on free space in the bar moves it to the end. The panes keep their sessions. Ctrl+Tab and the fill rule in point 5 follow the new order.
 
 ## 5. Undock and dock
 
-A session can live in its own window, for example on another display. The Claude process keeps running. The new window opens on a second display. On a machine with one display, it opens on the main display. The window has a "Next display" button and a "Dock" button. When you close the window, the session docks again.
+A session can live in its own window. The Claude process keeps running. The tab leaves the top tab bar, which lists docked tabs only. The session stays in the open list of the left panel with its window mark. The new window opens on a second display. On a machine with one display, it opens on the main display. The window has a "Dock" button only. The "Dock" button and the Dock item of the card menu dock the session again. Closing the window with its own close button closes the session, the same as closing its tab: the process ends and the session leaves the open list of the left panel. The other tabs and windows stay as they are. When Hive quits, the undocked windows close with it and no session closes. A docked-again tab returns to its place in the tab bar. If every tab is in its own window, the main window shows "No session open" and the cards stay in the left panel.
 
 The undocked window shows the screen of the process by a replay of its output. Then the process redraws after a small resize. Theme and color tags follow the main window.
 

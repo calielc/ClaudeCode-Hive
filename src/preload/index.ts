@@ -67,9 +67,9 @@ const api: HiveApi = {
   windows: {
     undock: (id, title) => ipcRenderer.send("windows:undock", id, title),
     dock: (id) => ipcRenderer.send("windows:dock", id),
-    nextDisplay: (id) => ipcRenderer.send("windows:nextDisplay", id),
     onDockedBack: (listener) =>
       listen<[string]>("windows:docked-back", listener),
+    onClosed: (listener) => listen<[string]>("windows:closed", listener),
     onReveal: (listener) => listen<[string]>("windows:reveal", listener),
     onCycleTabs: (listener) => listen<[boolean]>("shortcut:cycle", listener),
     setTitle: (id, title) => ipcRenderer.send("windows:setTitle", id, title),

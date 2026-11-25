@@ -100,8 +100,9 @@ export function activateTab(id: string): void {
   }
 }
 
-export function closeTab(id: string): void {
-  if (getState().detached.includes(id)) {
+/** Closes a tab and its session. `windowIsGone` is true when the undocked window has closed already. */
+export function closeTab(id: string, windowIsGone = false): void {
+  if (!windowIsGone && getState().detached.includes(id)) {
     hive().windows.dock(id);
   }
   hive().pty.kill(id);
@@ -435,6 +436,11 @@ export async function startMainWindow(): Promise<void> {
   hive().windows.onDockedBack((id) => {
     if (getState().tabs.some((tab) => tab.id === id)) {
       applyPanes(dockBack(paneState(), id));
+    }
+  });
+  hive().windows.onClosed((id) => {
+    if (getState().tabs.some((tab) => tab.id === id)) {
+      closeTab(id, true);
     }
   });
   hive().windows.onReveal((id) => {

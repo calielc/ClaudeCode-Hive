@@ -42,7 +42,9 @@ function MainView() {
       state.openSessions.filter((session) => session.state === "waiting")
         .length,
   );
-  const hasTabs = useStore((state) => state.tabs.length > 0);
+  const hasTabs = useStore((state) =>
+    state.tabs.some((tab) => !state.detached.includes(tab.id)),
+  );
   const sidebarHidden = useStore((state) => state.sidebarHidden);
   const sidebarWidth = useStore((state) => state.sidebarWidth);
   const started = useRef(false);
