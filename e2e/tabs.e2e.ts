@@ -198,7 +198,15 @@ describe("sessions, tabs and panes", () => {
 
     const other = app.windows().find((window) => window !== page);
     assert.ok(other);
-    await other.getByRole("button", { name: "Dock", exact: true }).click();
+    // The click closes the window, so Playwright can report the closed page while the click ends. That is the wanted result.
+    await other
+      .getByRole("button", { name: "Dock", exact: true })
+      .click()
+      .catch((error: unknown) => {
+        if (!String(error).includes("has been closed")) {
+          throw error;
+        }
+      });
     await eventually(async () => {
       assert.equal(app.windows().length, 1);
       assert.deepEqual((await hive.state()).detached, []);
