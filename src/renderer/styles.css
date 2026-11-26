@@ -514,9 +514,10 @@ button {
 
 .usage-row {
   display: grid;
-  grid-template-columns: 62px 1fr 34px 52px 12px;
+  grid-template-columns: 62px 1fr 34px 52px 54px;
   align-items: center;
   gap: 6px;
+  min-height: 16px;
   margin: 3px 0;
   font-size: 11px;
 }
@@ -552,21 +553,29 @@ button {
 }
 
 .usage-forecast {
+  padding: 1px 0;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 12px;
   text-align: center;
-  line-height: 1;
+  white-space: nowrap;
+  border-radius: 8px;
   cursor: default;
 }
 
 .usage-forecast[data-level="green"] {
   color: #4dbf66;
+  background: rgba(77, 191, 102, 0.16);
 }
 
 .usage-forecast[data-level="yellow"] {
   color: #f79433;
+  background: rgba(247, 148, 51, 0.16);
 }
 
 .usage-forecast[data-level="red"] {
   color: #eb4d4d;
+  background: rgba(235, 77, 77, 0.16);
 }
 
 .usage-note {

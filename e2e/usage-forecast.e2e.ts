@@ -25,6 +25,9 @@ interface UsageSeed {
   opus?: number;
 }
 
+/** The words on the label of each level. */
+const LEVEL_WORDS = { green: "On track", yellow: "Tight", red: "At risk" };
+
 const levelColors = new Map<string, string>();
 
 const launches: Hive[] = [];
@@ -86,7 +89,7 @@ interface Expected {
   tooltip: string;
 }
 
-/** Checks the one icon at the end of a row: attributes, tooltip, glyph and place. */
+/** Checks the one label at the end of a row: attributes, tooltip, words and place. */
 async function assertIcon(
   hive: Hive,
   label: string,
@@ -100,8 +103,8 @@ async function assertIcon(
   assert.equal(await icon.getAttribute("title"), expected.tooltip);
   assert.equal(await icon.getAttribute("aria-label"), expected.tooltip);
   assert.equal(await icon.getAttribute("role"), "img");
-  assert.equal(await icon.textContent(), "●");
-  // The icon is the last cell of the row, after the reset countdown, in its own column.
+  assert.equal(await icon.textContent(), LEVEL_WORDS[expected.level]);
+  // The label is the last cell of the row, after the reset countdown, in its own column.
   assert.equal(
     await usageRow.evaluate(
       (element, id) =>
@@ -114,7 +117,7 @@ async function assertIcon(
   const resetBox = await usageRow.locator(".usage-reset").boundingBox();
   assert.ok(iconBox && resetBox);
   assert.ok(iconBox.x >= resetBox.x + resetBox.width - 0.5);
-  // The glyph takes the color of its level.
+  // The text takes the color of its level.
   const color = await icon.evaluate(
     (element) => getComputedStyle(element).color,
   );
@@ -139,7 +142,7 @@ async function assertNoForecastLine(hive: Hive): Promise<void> {
   );
 }
 
-describe("the forecast icon in the usage limits", () => {
+describe("the forecast label in the usage limits", () => {
   test("a 5 hour window that runs out is red, and the weekly windows follow the work week", async () => {
     // 5 hours: 75% after 2h of 5h is 37.5% per hour, so the last 25% takes 40 minutes.
     // Week: 20% after 30h of 60h of work is 40% at the reset, which is green.
@@ -224,7 +227,7 @@ describe("the forecast icon in the usage limits", () => {
 
   test("84% at the reset is still green, and a row without a forecast keeps its column empty", async () => {
     // 5 hours: 33.6% after 2h of 5h is 33.6 * 2.5 = 84% at the reset.
-    // Week: 0% has no forecast, so its row has no icon, and its cells line up with the row above.
+    // Week: 0% has no forecast, so its row has no label, and its cells line up with the row above.
     const hive = await launchWithUsage({ five: [33.6, 3 * HOUR], week: 0 });
     await assertIcon(hive, "5 hours", {
       kind: "lasts",
