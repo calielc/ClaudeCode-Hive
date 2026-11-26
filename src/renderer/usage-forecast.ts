@@ -7,7 +7,7 @@ const WINDOW_WEEK = 7 * 24 * HOUR;
 const MIN_ELAPSED_SHARE = 0.05;
 
 const WORK_START_HOUR = 9;
-const WORK_END_HOUR = 17;
+const WORK_END_HOUR = 21;
 
 /** The working hours of one local calendar day, or null on a Saturday or Sunday. */
 function workDay(
@@ -25,7 +25,7 @@ function workDay(
   };
 }
 
-/** The working milliseconds between two instants. Working time is Monday to Friday, 09:00 to 17:00 in the local time zone. */
+/** The working milliseconds between two instants. Working time is Monday to Friday, 09:00 to 21:00 in the local time zone. */
 export function workTimeBetween(a: number, b: number): number {
   if (b <= a) {
     return 0;
