@@ -436,7 +436,7 @@ function resetTitle(
   return `${rolledOver ? "Reset on" : "Resets on"} ${when}`;
 }
 
-const WORK_WEEK_NOTE = " (based on a 5 day, 12 hour work week)";
+const WORK_WEEK_NOTE = " (based on 12 hours a day, 84 hours a week)";
 
 /** The tooltip of the forecast label, which tells what the current pace means. */
 function forecastText(

@@ -9,10 +9,10 @@ import { createFixture, MINUTE } from "./fixture";
 const HOUR = 60 * MINUTE;
 /** The app reads the real clock, so each run pins it. Wednesday 12 March 2025, 15:00 in UTC, and the app runs with TZ=UTC. */
 const PINNED_NOW = Date.UTC(2025, 2, 12, 15);
-// The weekly window of every run: Monday 10 March 09:00 to Monday 17 March 09:00 UTC. It has 60h of work.
-// At the pinned time, 30h of work have passed (Monday 12h, Tuesday 12h, Wednesday 6h) and 30h remain.
+// The weekly window of every run: Monday 10 March 09:00 to Monday 17 March 09:00 UTC. It has 84h of work.
+// At the pinned time, 30h of work have passed (Monday 12h, Tuesday 12h, Wednesday 6h) and 54h remain.
 const WEEK_RESET = Date.UTC(2025, 2, 17, 9);
-const WORK_WEEK_NOTE = "(based on a 5 day, 12 hour work week)";
+const WORK_WEEK_NOTE = "(based on 12 hours a day, 84 hours a week)";
 
 const seconds = (instant: number): number => Math.floor(instant / 1000);
 
@@ -145,7 +145,7 @@ async function assertNoForecastLine(hive: Hive): Promise<void> {
 describe("the forecast label in the usage limits", () => {
   test("a 5 hour window that runs out is red, and the weekly windows follow the work week", async () => {
     // 5 hours: 75% after 2h of 5h is 37.5% per hour, so the last 25% takes 40 minutes.
-    // Week: 20% after 30h of 60h of work is 40% at the reset, which is green.
+    // Week: 20% after 30h of 84h of work is 56% at the reset, which is green.
     // Week Opus: 80% after 30h is 2.67% per hour, so the last 20% takes 7.5h of work: 6h on Wednesday, then 1.5h on Thursday from 09:00.
     // The limit ends on Thursday 10:30, which is 19h 30m from Wednesday 15:00.
     const hive = await launchWithUsage({
@@ -161,7 +161,7 @@ describe("the forecast label in the usage limits", () => {
     await assertIcon(hive, "Week", {
       kind: "lasts",
       level: "green",
-      tooltip: `On pace for 40% at the reset ${WORK_WEEK_NOTE}`,
+      tooltip: `On pace for 56% at the reset ${WORK_WEEK_NOTE}`,
     });
     await assertIcon(hive, "Week Opus", {
       kind: "runs-out",
@@ -173,11 +173,11 @@ describe("the forecast label in the usage limits", () => {
 
   test("a 5 hour window that lasts below 85% is green, and a reached limit says so", async () => {
     // 5 hours: 33% after 3h of 5h is 33 * 5 / 3 = 55% at the reset.
-    // Week: 43% after 30h of 60h is 86%, which is yellow.
+    // Week: 32% after 30h of 84h is 89.6, so 90% at the reset, which is yellow.
     // Week Opus: 100% is a limit that is reached.
     const hive = await launchWithUsage({
       five: [33, 2 * HOUR],
-      week: 43,
+      week: 32,
       opus: 100,
     });
     await assertIcon(hive, "5 hours", {
@@ -188,7 +188,7 @@ describe("the forecast label in the usage limits", () => {
     await assertIcon(hive, "Week", {
       kind: "lasts",
       level: "yellow",
-      tooltip: `On pace for 86% at the reset ${WORK_WEEK_NOTE}`,
+      tooltip: `On pace for 90% at the reset ${WORK_WEEK_NOTE}`,
     });
     await assertIcon(hive, "Week Opus", {
       kind: "runs-out",
@@ -200,12 +200,12 @@ describe("the forecast label in the usage limits", () => {
 
   test("a 5 hour window that lasts at 85% or more is yellow", async () => {
     // 5 hours: 72% after 4h of 5h is 72 * 5 / 4 = 90% at the reset. The last 28% would take 1.56h, which is more than the 1h that remains.
-    // Week: 34% after 30h of 60h is 68%, which is green.
-    // Week Opus: 42.5% after 30h of 60h is exactly 85%, which is yellow.
+    // Week: 25% after 30h of 84h is 70% at the reset, which is green.
+    // Week Opus: 30.5% after 30h of 84h is 85.4, so 85% at the reset, which is yellow.
     const hive = await launchWithUsage({
       five: [72, HOUR],
-      week: 34,
-      opus: 42.5,
+      week: 25,
+      opus: 30.5,
     });
     await assertIcon(hive, "5 hours", {
       kind: "lasts",
@@ -215,7 +215,7 @@ describe("the forecast label in the usage limits", () => {
     await assertIcon(hive, "Week", {
       kind: "lasts",
       level: "green",
-      tooltip: `On pace for 68% at the reset ${WORK_WEEK_NOTE}`,
+      tooltip: `On pace for 70% at the reset ${WORK_WEEK_NOTE}`,
     });
     await assertIcon(hive, "Week Opus", {
       kind: "lasts",

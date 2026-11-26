@@ -107,7 +107,7 @@ Eight colors mark sessions: red, orange, yellow, green, teal, blue, purple and p
 - Each bar shows the percent used and the time until the reset. A tooltip on the row gives the real date and time of the reset, in the time zone of the computer.
 - A bar turns orange at 60 percent and red above 75 percent.
 - At the right end of the 5 hour and the weekly row, a small colored label shows the forecast at the current pace. The label says "At risk" in red if the limit runs out before the reset, "Tight" in yellow if you will have used 85 percent or more at the reset, and "On track" in green if you will have used less. Hover over the label to read the tooltip, for example "Runs out in 1h 20m (before the reset)" or "On pace for 74% at the reset". The forecast divides the percent used by the time since the window began. It needs 5 percent of the window to pass first, and it shows no label while the usage is 0.
-- The weekly windows count only working time: Monday to Friday, 09:00 to 21:00 in the local time zone, which is a 5 day, 12 hour work week. Nights and weekends do not lower the pace. The tooltip of a weekly window ends with "(based on a 5 day, 12 hour work week)".
+- The weekly windows count only working time: every day of the week, 09:00 to 21:00 in the local time zone, which is 12 hours a day and 84 hours a week. The nights do not lower the pace. The tooltip of a weekly window ends with "(based on 12 hours a day, 84 hours a week)".
 - After the reset time of a window, the bar shows a dash and "reset" until the next update.
 - A note appears for numbers that are older than 10 minutes.
 - The numbers refresh only while a Claude Code session is open, because only the status line receives them.
