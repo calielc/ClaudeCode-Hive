@@ -13,8 +13,8 @@ const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 const FIVE_HOURS = 5 * HOUR;
 const WEEK = 7 * DAY;
-/** The weekly forecast counts working time: Monday to Friday, 09:00 to 17:00 local time, so 8 hours a day and 40 a week. */
-const WORK_WEEK = 40 * HOUR;
+/** The weekly forecast counts working time: every day, 09:00 to 21:00 local time, so 12 hours a day and 84 a week. */
+const WORK_WEEK = 84 * HOUR;
 
 /** A window with `remaining` ms until the reset. */
 function windowWith(
@@ -208,7 +208,7 @@ for (const zone of ["UTC", "Europe/Amsterdam"]) {
       }
     });
 
-    // March 2025: Mon 3, Mon 10, Mon 17, Mon 24, Mon 31. The 15th is a Saturday and the 16th a Sunday.
+    // March 2025: Mon 3, Mon 10, Mon 17, Mon 24, Mon 31. The 15th is a Saturday and the 16th a Sunday, and they count as work days.
 
     test("workTimeBetween counts the hours inside one working day", () => {
       assert.equal(
@@ -221,43 +221,46 @@ for (const zone of ["UTC", "Europe/Amsterdam"]) {
       );
     });
 
-    test("workTimeBetween skips the night over the 17:00 boundary", () => {
-      // Wednesday 16:00 to 17:00 is 1h, and Thursday 09:00 to 10:00 is 1h.
+    test("workTimeBetween skips the night over the 21:00 boundary", () => {
+      // Wednesday 20:00 to 21:00 is 1h, and Thursday 09:00 to 10:00 is 1h.
       assert.equal(
-        workTimeBetween(local(3, 12, 16), local(3, 13, 10)),
+        workTimeBetween(local(3, 12, 20), local(3, 13, 10)),
         2 * HOUR,
       );
-      // A whole night in between counts nothing: Wednesday 17:00 to Thursday 09:00.
-      assert.equal(workTimeBetween(local(3, 12, 17), local(3, 13, 9)), 0);
+      // A whole night in between counts nothing: Wednesday 21:00 to Thursday 09:00.
+      assert.equal(workTimeBetween(local(3, 12, 21), local(3, 13, 9)), 0);
     });
 
-    test("workTimeBetween skips the weekend", () => {
-      // Friday 16:00 to 17:00 is 1h, and Monday 09:00 to 10:00 is 1h.
+    test("workTimeBetween counts the weekend", () => {
+      // Friday 20:00 to 21:00 is 1h, Saturday and Sunday are 12h each, and Monday 09:00 to 10:00 is 1h.
       assert.equal(
-        workTimeBetween(local(3, 14, 16), local(3, 17, 10)),
-        2 * HOUR,
+        workTimeBetween(local(3, 14, 20), local(3, 17, 10)),
+        26 * HOUR,
       );
     });
 
-    test("workTimeBetween from a Saturday counts only the Monday", () => {
-      // Saturday 12:00 to Monday 11:00 is the Monday 09:00 to 11:00.
+    test("workTimeBetween from a Saturday counts the rest of the weekend", () => {
+      // Saturday 12:00 to 21:00 is 9h, Sunday is 12h and Monday 09:00 to 11:00 is 2h.
       assert.equal(
         workTimeBetween(local(3, 15, 12), local(3, 17, 11)),
-        2 * HOUR,
+        23 * HOUR,
       );
-      // Saturday to Sunday counts nothing.
-      assert.equal(workTimeBetween(local(3, 15, 12), local(3, 16, 20)), 0);
+      // Saturday 12:00 to Sunday 20:00 is 9h and 11h.
+      assert.equal(
+        workTimeBetween(local(3, 15, 12), local(3, 16, 20)),
+        20 * HOUR,
+      );
     });
 
-    test("workTimeBetween at exactly 09:00 and exactly 17:00", () => {
+    test("workTimeBetween at exactly 09:00 and exactly 21:00", () => {
       assert.equal(
-        workTimeBetween(local(3, 17, 9), local(3, 17, 17)),
-        8 * HOUR,
+        workTimeBetween(local(3, 17, 9), local(3, 17, 21)),
+        12 * HOUR,
       );
-      // From 17:00 on, the rest of the day is nothing.
-      assert.equal(workTimeBetween(local(3, 17, 17), local(3, 18, 9)), 0);
-      // Tuesday 17:00 to Wednesday 10:00 is only the Wednesday hour.
-      assert.equal(workTimeBetween(local(3, 18, 17), local(3, 19, 10)), HOUR);
+      // From 21:00 on, the rest of the day is nothing.
+      assert.equal(workTimeBetween(local(3, 17, 21), local(3, 18, 9)), 0);
+      // Tuesday 21:00 to Wednesday 10:00 is only the Wednesday hour.
+      assert.equal(workTimeBetween(local(3, 18, 21), local(3, 19, 10)), HOUR);
       // Monday 08:00 to 09:00 is before the work starts.
       assert.equal(workTimeBetween(local(3, 17, 8), local(3, 17, 9)), 0);
     });
@@ -269,19 +272,18 @@ for (const zone of ["UTC", "Europe/Amsterdam"]) {
     });
 
     test("workTimeBetween of a span of several weeks", () => {
-      // Three whole weeks, Monday 00:00 to Monday 00:00: 3 * 40h.
+      // Three whole weeks, Monday 00:00 to Monday 00:00: 3 * 84h.
       assert.equal(
         workTimeBetween(local(3, 3, 0), local(3, 24, 0)),
         3 * WORK_WEEK,
       );
       // Wednesday 5th 12:00 to Thursday 20th 10:00:
-      // Wednesday 5h, Thursday 8h and Friday 8h = 21h.
-      // Week of the 10th: 40h.
-      // Monday 17th, Tuesday 18th and Wednesday 19th: 24h.
-      // Thursday 20th 09:00 to 10:00: 1h. Total 86h.
+      // Wednesday 12:00 to 21:00 is 9h.
+      // The 6th to the 19th are 14 whole days: 168h.
+      // Thursday 20th 09:00 to 10:00: 1h. Total 178h.
       assert.equal(
         workTimeBetween(local(3, 5, 12), local(3, 20, 10)),
-        86 * HOUR,
+        178 * HOUR,
       );
     });
 
@@ -293,8 +295,8 @@ for (const zone of ["UTC", "Europe/Amsterdam"]) {
         workTimeBetween(a, c),
         workTimeBetween(a, b) + workTimeBetween(b, c),
       );
-      // Wednesday 13:00 to 17:00 is 4h, and Thursday and Friday are 16h. After the weekend, Tuesday 09:00 to 16:30 is 7.5h.
-      assert.equal(workTimeBetween(a, c), 20 * HOUR + 8 * HOUR + 7.5 * HOUR);
+      // Wednesday 13:00 to 21:00 is 8h. Thursday to Monday are 5 whole days: 60h. Tuesday 09:00 to 16:30 is 7.5h.
+      assert.equal(workTimeBetween(a, c), 8 * HOUR + 60 * HOUR + 7.5 * HOUR);
     });
 
     test("addWorkTime moves inside one working day", () => {
@@ -302,36 +304,36 @@ for (const zone of ["UTC", "Europe/Amsterdam"]) {
       assert.equal(addWorkTime(local(3, 12, 10), 1), local(3, 12, 10) + 1);
     });
 
-    test("addWorkTime jumps over the 17:00 boundary to the next morning", () => {
-      // Wednesday 15:00 + 3h: 2h until 17:00, then 1h on Thursday from 09:00.
-      assert.equal(addWorkTime(local(3, 12, 15), 3 * HOUR), local(3, 13, 10));
+    test("addWorkTime jumps over the 21:00 boundary to the next morning", () => {
+      // Wednesday 19:00 + 3h: 2h until 21:00, then 1h on Thursday from 09:00.
+      assert.equal(addWorkTime(local(3, 12, 19), 3 * HOUR), local(3, 13, 10));
     });
 
-    test("addWorkTime jumps over the weekend", () => {
-      // Friday 16:00 + 3h: 1h until 17:00, then 2h on Monday from 09:00.
-      assert.equal(addWorkTime(local(3, 14, 16), 3 * HOUR), local(3, 17, 11));
+    test("addWorkTime goes on into the weekend", () => {
+      // Friday 20:00 + 3h: 1h until 21:00, then 2h on Saturday from 09:00.
+      assert.equal(addWorkTime(local(3, 14, 20), 3 * HOUR), local(3, 15, 11));
     });
 
-    test("addWorkTime from a Saturday starts on the Monday", () => {
-      assert.equal(addWorkTime(local(3, 15, 12), HOUR), local(3, 17, 10));
-      // From a Sunday night as well.
+    test("addWorkTime inside the weekend", () => {
+      assert.equal(addWorkTime(local(3, 15, 12), HOUR), local(3, 15, 13));
+      // From a Saturday night it starts on Sunday at 09:00.
       assert.equal(
-        addWorkTime(local(3, 16, 23), 30 * MINUTE),
-        local(3, 17, 9, 30),
+        addWorkTime(local(3, 15, 23), 30 * MINUTE),
+        local(3, 16, 9, 30),
       );
     });
 
-    test("addWorkTime from exactly 09:00 and exactly 17:00", () => {
-      // A full day of work from 09:00 ends at 17:00 of the same day, not at 09:00 of the next day.
-      assert.equal(addWorkTime(local(3, 17, 9), 8 * HOUR), local(3, 17, 17));
+    test("addWorkTime from exactly 09:00 and exactly 21:00", () => {
+      // A full day of work from 09:00 ends at 21:00 of the same day, not at 09:00 of the next day.
+      assert.equal(addWorkTime(local(3, 17, 9), 12 * HOUR), local(3, 17, 21));
       assert.equal(
-        addWorkTime(local(3, 17, 9), 8 * HOUR + 1),
+        addWorkTime(local(3, 17, 9), 12 * HOUR + 1),
         local(3, 18, 9) + 1,
       );
-      // From 17:00 the work starts at 09:00 of the next working day.
-      assert.equal(addWorkTime(local(3, 17, 17), HOUR), local(3, 18, 10));
-      // From Friday 17:00 it starts on Monday.
-      assert.equal(addWorkTime(local(3, 14, 17), 8 * HOUR), local(3, 17, 17));
+      // From 21:00 the work starts at 09:00 of the next working day.
+      assert.equal(addWorkTime(local(3, 17, 21), HOUR), local(3, 18, 10));
+      // From Friday 21:00 it starts on Saturday.
+      assert.equal(addWorkTime(local(3, 14, 21), 12 * HOUR), local(3, 15, 21));
     });
 
     test("addWorkTime of zero returns the start, in the night and in the weekend too", () => {
@@ -341,21 +343,21 @@ for (const zone of ["UTC", "Europe/Amsterdam"]) {
     });
 
     test("addWorkTime over several weeks", () => {
-      // Monday 3rd 09:00 + 120h of work: 15 working days end on Friday 21st at 17:00.
+      // Monday 3rd 09:00 + 252h of work: 21 days end on Sunday 23rd at 21:00.
       assert.equal(
         addWorkTime(local(3, 3, 9), 3 * WORK_WEEK),
-        local(3, 21, 17),
+        local(3, 23, 21),
       );
-      // The reverse of the 86h span above.
-      assert.equal(addWorkTime(local(3, 5, 12), 86 * HOUR), local(3, 20, 10));
+      // The reverse of the 178h span above.
+      assert.equal(addWorkTime(local(3, 5, 12), 178 * HOUR), local(3, 20, 10));
     });
 
     test("addWorkTime and workTimeBetween agree with each other", () => {
       const starts = [
         local(3, 12, 13),
-        local(3, 14, 16, 45),
+        local(3, 14, 20, 45),
         local(3, 15, 5),
-        local(3, 17, 17),
+        local(3, 17, 21),
         local(3, 18, 8, 59),
       ];
       const amounts = [1, 7 * MINUTE, 3 * HOUR, 8 * HOUR, 29 * HOUR, 83 * HOUR];
@@ -379,7 +381,7 @@ for (const zone of ["UTC", "Europe/Amsterdam"]) {
     });
 
     describe("the forecast of the week window", () => {
-      // Week of Monday 10 to Monday 17 March, from 09:00 to 09:00. It holds 40h of work.
+      // Week of Monday 10 to Monday 17 March, from 09:00 to 09:00. It holds 84h of work.
       // The reset is set in a hook, after the outer hook has switched the zone. A value made while the block is defined would use the zone of the process.
       let reset = 0;
       before(() => {
@@ -387,25 +389,25 @@ for (const zone of ["UTC", "Europe/Amsterdam"]) {
       });
 
       test("runs out before the reset when the work pace is too fast", () => {
-        // Wednesday 12th 13:00: elapsed Monday and Tuesday 16h + Wednesday 4h = 20h, and the remaining work is 20h as well.
-        // 80% in 20h is 4% per hour, so the last 20% takes 5h of work.
-        // The 5h are 4h on Wednesday until 17:00 and 1h on Thursday, so the limit ends on Thursday 10:00, 21h from now.
+        // Wednesday 12th 15:00: elapsed Monday and Tuesday 24h + Wednesday 6h = 30h, and 54h of work remain.
+        // 80% in 30h is 2.67% per hour, so the last 20% takes 7.5h of work.
+        // The 7.5h are 6h on Wednesday until 21:00 and 1.5h on Thursday, so the limit ends on Thursday 10:30, 19.5h from now.
         assert.deepEqual(
-          forecastUsage(windowResettingAt("Week", 80, reset), local(3, 12, 13)),
-          { kind: "runs-out", msLeft: 21 * HOUR },
+          forecastUsage(windowResettingAt("Week", 80, reset), local(3, 12, 15)),
+          { kind: "runs-out", msLeft: 19 * HOUR + 30 * MINUTE },
         );
       });
 
       test("a slow work pace lasts, with the usage at the reset", () => {
-        // 20% in 20h of 40h: 40% at the reset. The continuous rule gives 20 * 168 / 84 = 40, so the numbers differ below.
+        // 20% in 30h of 84h: 20 * 84 / 30 = 56% at the reset.
         assert.deepEqual(
-          forecastUsage(windowResettingAt("Week", 20, reset), local(3, 12, 13)),
-          { kind: "lasts", percentAtReset: 40 },
+          forecastUsage(windowResettingAt("Week", 20, reset), local(3, 12, 15)),
+          { kind: "lasts", percentAtReset: 56 },
         );
-        // 30% in 20h: 30 * 40 / 20 = 60.
+        // 30% in 30h: 30 * 84 / 30 = 84.
         assert.deepEqual(
-          forecastUsage(windowResettingAt("Week", 30, reset), local(3, 12, 13)),
-          { kind: "lasts", percentAtReset: 60 },
+          forecastUsage(windowResettingAt("Week", 30, reset), local(3, 12, 15)),
+          { kind: "lasts", percentAtReset: 84 },
         );
       });
 
@@ -413,101 +415,114 @@ for (const zone of ["UTC", "Europe/Amsterdam"]) {
         assert.deepEqual(
           forecastUsage(
             windowResettingAt("Week Opus", 80, reset),
-            local(3, 12, 13),
+            local(3, 12, 15),
           ),
-          { kind: "runs-out", msLeft: 21 * HOUR },
+          { kind: "runs-out", msLeft: 19 * HOUR + 30 * MINUTE },
         );
         assert.deepEqual(
           forecastUsage(
             windowResettingAt("Week Sonnet", 30, reset),
-            local(3, 12, 13),
+            local(3, 12, 15),
           ),
-          { kind: "lasts", percentAtReset: 60 },
+          { kind: "lasts", percentAtReset: 84 },
         );
       });
 
       test("the night does not count as time that passes", () => {
-        // Tuesday 22:00: the elapsed work is Monday and Tuesday, 16h, and 24h remain.
-        // 32% in 16h is 2% per hour, so 100% takes 34h more, which is more than 24h: lasts, with 32 * 40 / 16 = 80%.
-        // The continuous rule would see 37h of 168h, predict 32 * 168 / 37 = 145% and say runs out.
+        // Tuesday 22:00: the elapsed work is Monday and Tuesday, 24h, and 60h remain.
+        // 24% in 24h is 1% per hour, so the last 76% takes 76h, which is more than 60h: lasts, with 24 * 84 / 24 = 84%.
+        // The continuous rule would see 37h of 168h, predict 24 * 168 / 37 = 109% and say runs out.
         assert.deepEqual(
-          forecastUsage(windowResettingAt("Week", 32, reset), local(3, 11, 22)),
-          { kind: "lasts", percentAtReset: 80 },
+          forecastUsage(windowResettingAt("Week", 24, reset), local(3, 11, 22)),
+          { kind: "lasts", percentAtReset: 84 },
         );
-        // 60% in 16h is 3.75% per hour, so the last 40% takes 10h40m of work.
-        // Wednesday 09:00 to 17:00 is 8h, and the rest 2h40m ends on Thursday at 11:40.
-        // From Tuesday 22:00 that is 37h40m.
+        // 60% in 24h is 2.5% per hour, so the last 40% takes 16h of work.
+        // Wednesday 09:00 to 21:00 is 12h, and the rest 4h ends on Thursday at 13:00.
+        // From Tuesday 22:00 that is 39h.
         assert.deepEqual(
           forecastUsage(windowResettingAt("Week", 60, reset), local(3, 11, 22)),
-          { kind: "runs-out", msLeft: 37 * HOUR + 40 * MINUTE },
+          { kind: "runs-out", msLeft: 39 * HOUR },
         );
       });
 
-      test("in the weekend no work time remains, so the window lasts", () => {
-        // Saturday 15th 12:00: the elapsed work is the 40h of the whole week, and 0h remain.
-        // 50% in 40h is 1.25% per hour, so the last 50% would take 40h, which is more than 0h: lasts, with 50 * 40 / 40 = 50%.
+      test("the weekend counts as work time", () => {
+        // Saturday 15th 12:00: Monday to Friday are 60h and Saturday 09:00 to 12:00 is 3h, so 63h elapsed and 21h remain.
+        // 50% in 63h: the last 50% takes 63h, which is more than 21h: lasts, with 50 * 84 / 63 = 66.67, so 67%.
         assert.deepEqual(
           forecastUsage(windowResettingAt("Week", 50, reset), local(3, 15, 12)),
-          { kind: "lasts", percentAtReset: 50 },
+          { kind: "lasts", percentAtReset: 67 },
         );
+        // 70% in 63h: the last 30% takes 27h, which is more than 21h: lasts, with 70 * 84 / 63 = 93.33, so 93%.
         assert.deepEqual(
-          forecastUsage(windowResettingAt("Week", 99, reset), local(3, 15, 12)),
-          { kind: "lasts", percentAtReset: 99 },
+          forecastUsage(windowResettingAt("Week", 70, reset), local(3, 15, 12)),
+          { kind: "lasts", percentAtReset: 93 },
+        );
+        // 80% in 63h: the last 20% takes 15.75h. Saturday has 9h left and Sunday 09:00 to 15:45 gives the rest, so the limit ends 27h 45m from now.
+        assert.deepEqual(
+          forecastUsage(windowResettingAt("Week", 80, reset), local(3, 15, 12)),
+          { kind: "runs-out", msLeft: 27 * HOUR + 45 * MINUTE },
         );
       });
 
       test("a work pace that reaches 100% exactly at the reset lasts", () => {
-        // 50% in 20h: the last 50% takes 20h, which is exactly the 20h that remain.
+        // Thursday 13th 15:00: elapsed Monday to Wednesday 36h + Thursday 6h = 42h, and 42h remain.
+        // 50% in 42h: the last 50% takes 42h, which is exactly the 42h that remain.
         assert.deepEqual(
-          forecastUsage(windowResettingAt("Week", 50, reset), local(3, 12, 13)),
+          forecastUsage(windowResettingAt("Week", 50, reset), local(3, 13, 15)),
           { kind: "lasts", percentAtReset: 100 },
         );
       });
 
       test("a work pace a little above the exact boundary runs out", () => {
-        // 50.01% in 20h: the last 49.99% takes 49.99 * 72_000_000 / 50.01 = 71_971_205.76 ms of work.
-        // Wednesday gives 14_400_000 and Thursday 28_800_000, so 28_771_205.76 ms of Friday remain from 09:00.
-        // From Wednesday 13:00 to Friday 09:00 is 44h = 158_400_000 ms, so msLeft is 187_171_205.76 ms.
+        // Thursday 13th 15:00, 42h elapsed. 50.01% in 42h: the last 49.99% takes 49.99 * 151_200_000 / 50.01 = 151_139_532.09 ms of work.
+        // That is 60_467.91 ms less than the 42h of work that remain, and the 42h end on Sunday 21:00.
+        // From Thursday 15:00 to Sunday 21:00 is 78h = 280_800_000 ms, so msLeft is 280_739_532.09 ms.
         const forecast = forecastUsage(
           windowResettingAt("Week", 50.01, reset),
-          local(3, 12, 13),
+          local(3, 13, 15),
         );
         assert.equal(forecast?.kind, "runs-out");
         assert.ok(
           forecast?.kind === "runs-out" &&
-            Math.abs(forecast.msLeft - 187_171_205.76) <= 1,
+            Math.abs(forecast.msLeft - 280_739_532.09) <= 1,
           JSON.stringify(forecast),
         );
       });
 
       test("a work pace a little below the exact boundary lasts", () => {
-        // 49.99% in 20h: 49.99 * 40 / 20 = 99.98, which rounds to 100.
+        // Thursday 13th 15:00, 42h elapsed. 49.99% in 42h: 49.99 * 84 / 42 = 99.98, which rounds to 100.
         assert.deepEqual(
           forecastUsage(
             windowResettingAt("Week", 49.99, reset),
-            local(3, 12, 13),
+            local(3, 13, 15),
           ),
           { kind: "lasts", percentAtReset: 100 },
         );
-        // 49% in 20h: 98%.
+        // 49% in 42h: 98%.
         assert.deepEqual(
-          forecastUsage(windowResettingAt("Week", 49, reset), local(3, 12, 13)),
+          forecastUsage(windowResettingAt("Week", 49, reset), local(3, 13, 15)),
           { kind: "lasts", percentAtReset: 98 },
         );
       });
 
       test("exactly 5% of the working time elapsed gives a forecast", () => {
-        // 5% of 40h is 2h. Monday 11:00 is exactly 2h after the start.
-        // 4% in 2h: 4 * 40 / 2 = 80% at the reset.
+        // 5% of 84h is 4.2h. Monday 13:12 is exactly 4.2h after the start.
+        // 4% in 4.2h: 4 * 84 / 4.2 = 80% at the reset.
         assert.deepEqual(
-          forecastUsage(windowResettingAt("Week", 4, reset), local(3, 10, 11)),
+          forecastUsage(
+            windowResettingAt("Week", 4, reset),
+            local(3, 10, 13, 12),
+          ),
           { kind: "lasts", percentAtReset: 80 },
         );
-        // 10% in 2h is 5% per hour, so the last 90% takes 18h of work: Monday 6h, Tuesday 8h and Wednesday 4h.
-        // That ends on Wednesday 13:00, which is 50h after Monday 11:00.
+        // 10% in 4.2h, so the last 90% takes 37.8h of work: 7.8h on Monday, 24h on Tuesday and Wednesday, and 6h on Thursday.
+        // That ends on Thursday 15:00, which is 73.8h after Monday 13:12.
         assert.deepEqual(
-          forecastUsage(windowResettingAt("Week", 10, reset), local(3, 10, 11)),
-          { kind: "runs-out", msLeft: 50 * HOUR },
+          forecastUsage(
+            windowResettingAt("Week", 10, reset),
+            local(3, 10, 13, 12),
+          ),
+          { kind: "runs-out", msLeft: 73.8 * HOUR },
         );
       });
 
@@ -515,21 +530,21 @@ for (const zone of ["UTC", "Europe/Amsterdam"]) {
         assert.equal(
           forecastUsage(
             windowResettingAt("Week", 4, reset),
-            local(3, 10, 11) - 1,
+            local(3, 10, 13, 12) - 1,
           ),
           null,
         );
         assert.equal(
           forecastUsage(
             windowResettingAt("Week", 100, reset),
-            local(3, 10, 11) - 1,
+            local(3, 10, 13, 12) - 1,
           ),
           null,
         );
       });
 
       test("the early hours of the week give no forecast, because no work has passed", () => {
-        // Sunday night and Monday before 09:00 have 0h of elapsed work.
+        // Monday before 09:00 has 0h of elapsed work, and Sunday night is before the window.
         assert.equal(
           forecastUsage(windowResettingAt("Week", 5, reset), local(3, 10, 8)),
           null,
@@ -544,21 +559,21 @@ for (const zone of ["UTC", "Europe/Amsterdam"]) {
         assert.deepEqual(
           forecastUsage(
             windowResettingAt("Week", 100, reset),
-            local(3, 12, 13),
+            local(3, 12, 15),
           ),
           { kind: "runs-out", msLeft: 0 },
         );
         assert.deepEqual(
           forecastUsage(
             windowResettingAt("Week", 130, reset),
-            local(3, 12, 13),
+            local(3, 12, 15),
           ),
           { kind: "runs-out", msLeft: 0 },
         );
       });
 
       test("no forecast when the reset is further away than a week", () => {
-        const now = local(3, 12, 13);
+        const now = local(3, 12, 15);
         assert.equal(
           forecastUsage(windowResettingAt("Week", 40, now + WEEK + 1), now),
           null,
@@ -571,15 +586,15 @@ for (const zone of ["UTC", "Europe/Amsterdam"]) {
       });
 
       test("a reset a few hours away uses the working hours before it", () => {
-        // The window ends on Friday 14th 17:00 and starts on Friday 7th 17:00.
-        // Friday 14th 11:00: 34h elapsed and 6h remain. 40% in 34h: 40 * 40 / 34 = 47.06, so 47%.
-        // The last 60% would take 51h, which is more than 6h.
+        // The window ends on Friday 14th 21:00 and starts on Friday 7th 21:00.
+        // Friday 14th 15:00: 78h elapsed and 6h remain. 40% in 78h: 40 * 84 / 78 = 43.08, so 43%.
+        // The last 60% would take 117h, which is more than 6h.
         assert.deepEqual(
           forecastUsage(
-            windowResettingAt("Week", 40, local(3, 14, 17)),
-            local(3, 14, 11),
+            windowResettingAt("Week", 40, local(3, 14, 21)),
+            local(3, 14, 15),
           ),
-          { kind: "lasts", percentAtReset: 47 },
+          { kind: "lasts", percentAtReset: 43 },
         );
       });
     });
@@ -604,38 +619,41 @@ describe("working time around the change to summer time in Amsterdam", () => {
   // Autumn: the clocks go back on Sunday 26 October 2025 at 03:00.
 
   test("the weekend of the change loses no work time", () => {
-    // Friday 28th 12:00 to Monday 31st 12:00: Friday 5h and Monday 3h.
-    assert.equal(workTimeBetween(local(3, 28, 12), local(3, 31, 12)), 8 * HOUR);
-    // The week from Monday 24th to Monday 31st is a full 40h, although the wall clock has only 167h.
+    // Friday 28th 12:00 to Monday 31st 12:00: Friday 9h, Saturday 12h, Sunday 12h and Monday 3h.
+    assert.equal(
+      workTimeBetween(local(3, 28, 12), local(3, 31, 12)),
+      36 * HOUR,
+    );
+    // The week from Monday 24th to Monday 31st is a full 84h, although the wall clock has only 167h.
     assert.equal(workTimeBetween(local(3, 24, 0), local(3, 31, 0)), WORK_WEEK);
   });
 
   test("addWorkTime across the change to summer time returns 10:00 local time, one hour less on the wall clock", () => {
-    // Friday 28th 16:00 + 2h: 1h until 17:00 and 1h on Monday from 09:00, so Monday 31st 10:00 local time.
-    const result = addWorkTime(local(3, 28, 16), 2 * HOUR);
-    assert.equal(result, local(3, 31, 10));
-    // From Friday 16:00 to Monday 10:00 is 66h on the clock face, and 65h really passed because 02:00 became 03:00.
-    assert.equal(result - local(3, 28, 16), 65 * HOUR);
+    // Saturday 29th 20:00 + 2h: 1h until 21:00 and 1h on Sunday from 09:00, so Sunday 30th 10:00 local time.
+    const result = addWorkTime(local(3, 29, 20), 2 * HOUR);
+    assert.equal(result, local(3, 30, 10));
+    // From Saturday 20:00 to Sunday 10:00 is 14h on the clock face, and 13h really passed because 02:00 became 03:00.
+    assert.equal(result - local(3, 29, 20), 13 * HOUR);
   });
 
   test("addWorkTime across the change back to winter time takes one hour more on the wall clock", () => {
-    // Friday 24 October 16:00 + 2h ends on Monday 27th 10:00 local time. On the clock face that is 66h and really 67h passed.
-    const result = addWorkTime(local(10, 24, 16), 2 * HOUR);
-    assert.equal(result, local(10, 27, 10));
-    assert.equal(result - local(10, 24, 16), 67 * HOUR);
+    // Saturday 25 October 20:00 + 2h ends on Sunday 26th 10:00 local time. On the clock face that is 14h and really 15h passed.
+    const result = addWorkTime(local(10, 25, 20), 2 * HOUR);
+    assert.equal(result, local(10, 26, 10));
+    assert.equal(result - local(10, 25, 20), 15 * HOUR);
   });
 
-  test("the week window across the change still holds 40h of work", () => {
+  test("the week window across the change still holds 84h of work", () => {
     // The reset is Monday 31 March 09:00 summer time, which is 07:00 UTC. The start is 7 x 24h earlier, Monday 24th 07:00 UTC, which is 08:00 local time.
-    // Wednesday 26th 13:00: Monday 8h, Tuesday 8h and Wednesday 4h are 20h elapsed, and 20h remain.
+    // Wednesday 26th 15:00: Monday 12h, Tuesday 12h and Wednesday 6h are 30h elapsed, and 54h remain.
     const reset = local(3, 31, 9);
     assert.deepEqual(
-      forecastUsage(windowResettingAt("Week", 80, reset), local(3, 26, 13)),
-      { kind: "runs-out", msLeft: 21 * HOUR },
+      forecastUsage(windowResettingAt("Week", 80, reset), local(3, 26, 15)),
+      { kind: "runs-out", msLeft: 19 * HOUR + 30 * MINUTE },
     );
     assert.deepEqual(
-      forecastUsage(windowResettingAt("Week", 20, reset), local(3, 26, 13)),
-      { kind: "lasts", percentAtReset: 40 },
+      forecastUsage(windowResettingAt("Week", 20, reset), local(3, 26, 15)),
+      { kind: "lasts", percentAtReset: 56 },
     );
   });
 });

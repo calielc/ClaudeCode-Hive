@@ -7,25 +7,21 @@ const WINDOW_WEEK = 7 * 24 * HOUR;
 const MIN_ELAPSED_SHARE = 0.05;
 
 const WORK_START_HOUR = 9;
-const WORK_END_HOUR = 17;
+const WORK_END_HOUR = 21;
 
-/** The working hours of one local calendar day, or null on a Saturday or Sunday. */
+/** The working hours of one local calendar day. Every day of the week counts, so a week holds 84 hours. */
 function workDay(
   year: number,
   month: number,
   day: number,
-): { start: number; end: number } | null {
-  const weekday = new Date(year, month, day).getDay();
-  if (weekday === 0 || weekday === 6) {
-    return null;
-  }
+): { start: number; end: number } {
   return {
     start: new Date(year, month, day, WORK_START_HOUR).getTime(),
     end: new Date(year, month, day, WORK_END_HOUR).getTime(),
   };
 }
 
-/** The working milliseconds between two instants. Working time is Monday to Friday, 09:00 to 17:00 in the local time zone. */
+/** The working milliseconds between two instants. Working time is every day, 09:00 to 21:00 in the local time zone. */
 export function workTimeBetween(a: number, b: number): number {
   if (b <= a) {
     return 0;
@@ -53,9 +49,7 @@ export function workTimeBetween(a: number, b: number): number {
       cursor.getMonth(),
       cursor.getDate(),
     );
-    if (hours) {
-      total += Math.max(0, Math.min(b, hours.end) - Math.max(a, hours.start));
-    }
+    total += Math.max(0, Math.min(b, hours.end) - Math.max(a, hours.start));
   }
   return total;
 }
@@ -74,15 +68,13 @@ export function addWorkTime(from: number, workMs: number): number {
       cursor.getMonth(),
       cursor.getDate(),
     );
-    if (hours) {
-      const start = Math.max(from, hours.start);
-      if (start < hours.end) {
-        const available = hours.end - start;
-        if (remaining <= available) {
-          return start + remaining;
-        }
-        remaining -= available;
+    const start = Math.max(from, hours.start);
+    if (start < hours.end) {
+      const available = hours.end - start;
+      if (remaining <= available) {
+        return start + remaining;
       }
+      remaining -= available;
     }
     cursor = new Date(
       cursor.getFullYear(),
@@ -146,7 +138,7 @@ export function forecastUsage(
   };
 }
 
-/** The forecast of a weekly window. Only working time counts, so nights and weekends do not lower the pace. */
+/** The forecast of a weekly window. Only working time counts, so the nights do not lower the pace. */
 function forecastWorkWeek(
   percent: number,
   now: number,

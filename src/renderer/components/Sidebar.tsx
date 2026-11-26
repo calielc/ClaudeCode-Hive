@@ -436,9 +436,9 @@ function resetTitle(
   return `${rolledOver ? "Reset on" : "Resets on"} ${when}`;
 }
 
-const WORK_WEEK_NOTE = " (based on a 5 day, 8 hour work week)";
+const WORK_WEEK_NOTE = " (based on 12 hours a day, 84 hours a week)";
 
-/** The tooltip of the forecast icon, which tells what the current pace means. */
+/** The tooltip of the forecast label, which tells what the current pace means. */
 function forecastText(
   forecast: UsageForecast,
   label: string,
@@ -461,6 +461,13 @@ function forecastLevel(forecast: UsageForecast): "red" | "yellow" | "green" {
   }
   return forecast.percentAtReset >= 85 ? "yellow" : "green";
 }
+
+/** The words on the forecast label. The color alone is easy to miss, so each level also has a short text. */
+const FORECAST_WORDS = {
+  red: "At risk",
+  yellow: "Tight",
+  green: "On track",
+} as const;
 
 function UsageBars() {
   const usage = useStore((state) => state.usage);
@@ -516,7 +523,7 @@ function UsageBars() {
                 aria-label={forecastText(forecast, window.label, now)}
                 role="img"
               >
-                ●
+                {FORECAST_WORDS[forecastLevel(forecast)]}
               </span>
             )}
           </div>
