@@ -19,7 +19,6 @@ export interface ContextMenuState {
 }
 
 export interface State extends PaneState {
-  folders: string[];
   selectedFolder: string;
   tabs: Tab[];
   themeName: string;
@@ -58,7 +57,6 @@ export interface State extends PaneState {
 const STORAGE_KEY = "hive.settings.v1";
 
 interface Saved {
-  folders?: string[];
   selectedFolder?: string;
   layout?: LayoutMode;
   themeName?: string;
@@ -82,17 +80,12 @@ function load(): Saved {
 export function createInitialState(): State {
   const saved = load();
   const home = window.hive.home;
-  const folders = saved.folders?.length ? saved.folders : [home];
   // After a reload of the page the tabs come back. Their processes still run in the main process.
   const session = loadSession();
   return {
     ...initialPaneState(saved.layout ?? "single"),
     ...(session ?? {}),
-    folders,
-    selectedFolder:
-      saved.selectedFolder && folders.includes(saved.selectedFolder)
-        ? saved.selectedFolder
-        : (folders[0] ?? ""),
+    selectedFolder: saved.selectedFolder || home,
     tabs: session?.tabs ?? [],
     themeName: saved.themeName ?? "Tokyo Night",
     fontSize: clampFontSize(saved.fontSize),
@@ -147,7 +140,6 @@ function persist(): void {
     selectedTabId: state.selectedTabId,
   });
   const saved: Saved = {
-    folders: state.folders,
     selectedFolder: state.selectedFolder,
     layout: state.layout,
     themeName: state.themeName,

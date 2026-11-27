@@ -8,11 +8,9 @@ import {
 } from "react";
 import {
   activateTab,
-  addFolder,
   installHooks,
   openSession,
-  removeFolder,
-  selectFolder,
+  pickFolder,
   setQuery,
 } from "../actions";
 import {
@@ -72,46 +70,29 @@ function folderLabel(folder: string): string {
 }
 
 function FolderRow() {
-  const folders = useStore((state) => state.folders);
   const selected = useStore((state) => state.selectedFolder);
   return (
-    <div className="folder-row">
-      <select
-        value={selected}
-        onChange={(event) => selectFolder(event.target.value)}
+    <label className="folder-row">
+      <span>Folder</span>
+      <input
+        type="text"
+        readOnly
+        value={folderLabel(selected)}
         title={selected}
-      >
-        {folders.map((folder) => (
-          <option key={folder} value={folder}>
-            {folderLabel(folder)}
-          </option>
-        ))}
-      </select>
+        onClick={() => void pickFolder()}
+      />
       <button
         type="button"
         className="icon-button"
-        title="Add folder"
-        aria-label="Add folder"
-        onClick={() => void addFolder()}
+        title="Choose a folder"
+        aria-label="Choose a folder"
+        onClick={() => void pickFolder()}
       >
-        <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
-          <path d="M6 1.5v9M1.5 6h9" />
+        <svg viewBox="0 0 14 14" width="14" height="14" aria-hidden="true">
+          <path d="M1.5 3.5h4l1 1.5h6v6.5h-11z" />
         </svg>
       </button>
-      {folders.length > 1 && (
-        <button
-          type="button"
-          className="icon-button"
-          title="Remove this folder from the list"
-          aria-label="Remove this folder from the list"
-          onClick={() => removeFolder(selected)}
-        >
-          <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
-            <path d="M1.5 6h9" />
-          </svg>
-        </button>
-      )}
-    </div>
+    </label>
   );
 }
 

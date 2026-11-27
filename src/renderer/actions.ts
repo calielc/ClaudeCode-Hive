@@ -262,37 +262,12 @@ export function setTag(ids: string[], tag: string | null): void {
   });
 }
 
-export async function addFolder(): Promise<void> {
+export async function pickFolder(): Promise<void> {
   const folder = await hive().pickFolder();
-  if (folder) {
-    setState((current) => ({
-      folders: current.folders.includes(folder)
-        ? current.folders
-        : [...current.folders, folder],
-      selectedFolder: folder,
-    }));
+  if (folder && folder !== getState().selectedFolder) {
+    setState({ selectedFolder: folder, isLoading: true, sessions: [] });
     void refresh();
   }
-}
-
-export function selectFolder(folder: string): void {
-  setState({ selectedFolder: folder, isLoading: true, sessions: [] });
-  void refresh();
-}
-
-export function removeFolder(folder: string): void {
-  setState((current) => {
-    if (current.folders.length < 2) {
-      return {};
-    }
-    const folders = current.folders.filter((item) => item !== folder);
-    return {
-      folders,
-      selectedFolder:
-        current.selectedFolder === folder ? folders[0] : current.selectedFolder,
-    };
-  });
-  void refresh();
 }
 
 export function setSplit(patch: { splitX?: number; splitY?: number }): void {
@@ -416,12 +391,11 @@ export function focusSelected(): void {
 export async function startMainWindow(): Promise<void> {
   const state = getState();
   if (
-    state.folders.length === 1 &&
-    state.folders[0] === hive().home &&
+    state.selectedFolder === hive().home &&
     !localStorage.getItem("hive.settings.v1")
   ) {
     const folder = await hive().defaultFolder();
-    setState({ folders: [folder], selectedFolder: folder });
+    setState({ selectedFolder: folder });
   }
   onProcessExit((exit) => {
     // A process that ends by itself (/exit) closes its tab. One that fails right away keeps it, so the error stays readable.
