@@ -15,12 +15,11 @@ describe("the left panel", () => {
 
   test("starts in the home folder of the user and shows it by name", async () => {
     const state = await hive.state();
-    assert.deepEqual(state.folders, [hive.fixture.home]);
-    const label = await hive.page
-      .locator(".folder-row select option:checked")
-      .textContent();
-    assert.equal(label, basename(hive.fixture.home));
-    // With one folder in the list, there is no button to remove it.
+    assert.equal(state.selectedFolder, hive.fixture.home);
+    assert.equal(
+      await hive.page.locator(".folder-row input").inputValue(),
+      basename(hive.fixture.home),
+    );
     assert.equal(
       await hive.page.locator(".folder-row .icon-button").count(),
       1,

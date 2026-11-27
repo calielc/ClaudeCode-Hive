@@ -84,12 +84,20 @@ button {
 .folder-row {
   display: flex;
   gap: 6px;
+  align-items: center;
   padding: 10px 12px 0;
 }
 
-.folder-row select {
+.folder-row span {
+  flex: none;
+  color: var(--muted);
+}
+
+.folder-row input {
   flex: 1;
   min-width: 0;
+  cursor: pointer;
+  text-overflow: ellipsis;
   height: 30px;
   padding: 0 6px;
   line-height: 1.2;

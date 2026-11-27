@@ -70,7 +70,7 @@ All direct packages had the latest version on 2026-11-18. The `overrides` entry 
 - Shell output: Hive never reads a path that the renderer sends. The renderer sends the folder, the session id and the shell id. Main takes the path from the transcript and reads it only when its last four segments are the project folder name, the session id, `tasks` and `<shell id>.output`, and when it is a regular file, not a link. It returns the last 512 KB, cut at a line start.
 - State of a session: `~/.claude-sessions/status/<session-id>.json` with `{"state":"working|waiting|ready","ts":...}`. The hooks write it. For a waiting session, the file also holds the `message` and the `type` of the question.
 - Usage: `~/.claude-sessions/usage.json` with `five_hour`, `seven_day` (`used_percentage` and `resets_at` in seconds) and `model_scoped`. The status line wrapper writes it.
-- Settings of Hive: the `localStorage` key `hive.settings.v1` holds the folders, the selected folder, the layout, the theme, the font size, the tags, the divider positions whether the left panel is hidden and the version whose update notice the user closed.
+- Settings of Hive: the `localStorage` key `hive.settings.v1` holds the selected folder, the layout, the theme, the font size, the tags, the divider positions whether the left panel is hidden and the version whose update notice the user closed.
 - Open tabs: the `sessionStorage` key `hive.session.v1` holds the tabs, their order, the undocked tabs, the pane contents and the selected pane. It survives a page reload. It is gone after the window closes.
 
 ## 5. IPC

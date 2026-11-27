@@ -19,7 +19,7 @@ export interface HiveState {
   tags: Record<string, string>;
   detached: string[];
   agentViews: Record<string, string | null>;
-  folders: string[];
+  selectedFolder: string;
   sidebarHidden: boolean;
   fontSize: number;
   update: { version: string; url: string } | null;

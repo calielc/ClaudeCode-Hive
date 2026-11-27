@@ -14,13 +14,13 @@ All pictures in this file show demo data. The sessions, the folder and the termi
 
 ## 2. The left panel
 
-<img src="images/left-panel.png" alt="The left panel: folder menu, search field, status counts, three open sessions as cards, the sessions of the last 24 hours and the usage limits" width="300">
+<img src="images/left-panel.png" alt="The left panel: folder field, search field, status counts, three open sessions as cards, the sessions of the last 24 hours and the usage limits" width="300">
 
-From the top: the folder menu and the search field, the counts of working, waiting and ready sessions, the open sessions as cards, the other sessions as rows, and the usage limits. The first card is selected. It has an agent list, with Main first.
+From the top: the folder field and the search field, the counts of working, waiting and ready sessions, the open sessions as cards, the other sessions as rows, and the usage limits. The first card is selected. It has an agent list, with Main first.
 
 - **Hide the panel.** The button at the left of the top bar hides the whole left panel, and the same button shows it again. The key is Cmd+B on macOS and Ctrl+B elsewhere. The panes then use the full width. Hive saves the choice. The panel keeps its state while hidden. The search key shows the panel again and focuses the search field.
 - **Change the width.** Drag the right edge of the left panel to make it wider or narrower. The width stays between 200 and 600 pixels. A double click on the edge sets it back to 320 pixels. Hive saves the width.
-- **Folder menu.** It selects the folder whose sessions are on the list. The plus button adds a folder. The minus button removes the selected folder from the list. Hive saves the list and the selection. The first start uses the home folder of the user. The menu shows the home folder as its own name. It shows other folders with "~" for the home folder.
+- **Folder field.** A row with the label "Folder", a read-only field and a folder button. The field shows the folder whose sessions are on the list. A click on the field or on the button opens the folder picker. Hive saves the selection. The first start uses the home folder of the user. The field shows the home folder as its own name. It shows other folders with "~" for the home folder.
 - **Search.** The field searches the names of the sessions. It also searches the full text of the conversations, with the work of sub-agents. Names match at once. The search of conversations starts 300 ms after the last key. It needs 2 characters. A result that matches only in a conversation shows the note "found in the conversation". Escape clears the field.
 - **Status counts.** Three numbers show the sessions that work, wait and are ready. They count the open sessions and the sessions of the last 24 hours.
 - **Open section.** This section has no heading and comes first. It has one card for each session that is open in a tab, in tab order. It also holds a new session that has no file yet. It also holds a tab from another folder.
