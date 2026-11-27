@@ -110,9 +110,17 @@ export class PtyManager {
       running.flushTimer ??= setTimeout(() => this.flush(id), FLUSH_MS);
     });
     child.onExit(({ exitCode }) => {
-      this.flush(id);
-      this.running.delete(id);
-      this.onExit({ id, exitCode, ranMs: Date.now() - running.startedAt });
+      // node-pty calls this from native code. An exception that leaves it aborts the whole app.
+      try {
+        this.flush(id);
+      } finally {
+        this.running.delete(id);
+        try {
+          this.onExit({ id, exitCode, ranMs: Date.now() - running.startedAt });
+        } catch {
+          // The window is gone, so nobody needs the exit.
+        }
+      }
     });
   }
 

@@ -139,7 +139,9 @@ function startUpdateChecks(): void {
 
 function broadcast(channel: string, ...args: unknown[]): void {
   for (const window of BrowserWindow.getAllWindows()) {
-    window.webContents.send(channel, ...args);
+    if (!window.isDestroyed() && !window.webContents.isDestroyed()) {
+      window.webContents.send(channel, ...args);
+    }
   }
 }
 
