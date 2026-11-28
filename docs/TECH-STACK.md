@@ -37,6 +37,7 @@ All direct packages had the latest version on 2026-11-18. The `overrides` entry 
 - `src/main/pty.ts`: the Claude processes, the output buffer and the batching.
 - `src/main/status.ts`: watches the status files and reads the usage.
 - `src/main/hooks.ts` and `hooks-settings.ts` with `scripts/hook.cjs` and `scripts/statusline-tap.cjs`: the hook installer and the two scripts that it installs.
+- `src/main/folder-path.ts`: turns a folder path that the user typed into the absolute path of a folder that exists, with `~` for the home folder.
 - `src/main/external-url.ts`: the links that can open outside the app.
 - `src/main/update-check.ts`: the check for a newer release. It compares versions, reads the answer of the GitHub API and runs the timer.
 - `src/renderer/panes.ts`: the pure placement logic of `docs/FEATURES.md`, section 4.
@@ -75,7 +76,7 @@ All direct packages had the latest version on 2026-11-18. The `overrides` entry 
 
 ## 5. IPC
 
-- Calls with an answer: `sessions:scan`, `sessions:search`, `agents:list`, `agents:transcript`, `shells:list`, `shells:output`, `background:list`, `background:detail`, `usage:read`, `hooks:status`, `hooks:install`, `dialog:pickFolder`, `app:defaultFolder` and `pty:attach` and `update:get`.
+- Calls with an answer: `sessions:scan`, `sessions:search`, `agents:list`, `agents:transcript`, `shells:list`, `shells:output`, `background:list`, `background:detail`, `usage:read`, `hooks:status`, `hooks:install`, `dialog:pickFolder`, `app:resolveFolder`, `app:defaultFolder` and `pty:attach` and `update:get`.
 - One call that the preload makes at start and waits for: `app:home`. It returns the home folder from the operating system, not from the `HOME` variable. A shell can set `HOME` to a path style that Windows does not use.
 - Messages without an answer: `tabs:setOpen`, `app:openExternal`, `app:openFolder`, `badge:set`, `theme:menu`, `pty:write`, `pty:resize`, `pty:kill`, `windows:undock`, `windows:dock` and `windows:setTitle`.
 - Events to the pages: `pty:data`, `pty:exit`, `windows:docked-back`, `windows:closed`, `windows:reveal` and `update:available`.
