@@ -25,7 +25,10 @@ test("a tilde means the home folder, and a relative path starts there", () => {
   const shop = join(root, "work", "shop");
   assert.equal(resolveFolder("~", root), root);
   assert.equal(resolveFolder("~/work/shop", root), shop);
-  assert.equal(resolveFolder("~\\work\\shop", root), shop);
+  // A backslash separates folders on Windows only. Elsewhere it is a character of the name.
+  if (process.platform === "win32") {
+    assert.equal(resolveFolder("~\\work\\shop", root), shop);
+  }
   assert.equal(resolveFolder("work/shop", root), shop);
   assert.equal(resolveFolder(join(shop, ".."), root), join(root, "work"));
 });
