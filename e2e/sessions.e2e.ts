@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { basename } from "node:path";
+import { basename, join } from "node:path";
 import { after, before, describe, test } from "node:test";
 import { eventually, type Hive, launchHive, row } from "./app";
 
@@ -24,6 +24,48 @@ describe("the left panel", () => {
       await hive.page.locator(".folder-row .icon-button").count(),
       1,
     );
+  });
+
+  test("opens a folder that you type into the field, and only the button opens the picker", async () => {
+    const { page } = hive;
+    const field = page.locator(".folder-row input");
+    // A click puts the full path in the field to edit. No picker opens, so the click does not hang.
+    await field.click();
+    assert.equal(await field.inputValue(), hive.fixture.home);
+    assert.equal(
+      await field.evaluate((input) => input === document.activeElement),
+      true,
+    );
+
+    await field.fill(join(hive.fixture.home, "missing"));
+    await field.press("Enter");
+    await eventually(async () =>
+      assert.equal(await field.getAttribute("aria-invalid"), "true"),
+    );
+    assert.equal((await hive.state()).selectedFolder, hive.fixture.home);
+    // Escape drops the text, and the field shows the selected folder again.
+    await field.press("Escape");
+    await eventually(async () =>
+      assert.equal(await field.inputValue(), basename(hive.fixture.home)),
+    );
+
+    const other = join(hive.fixture.home, ".claude");
+    await field.click();
+    await field.fill(other);
+    await field.press("Enter");
+    await eventually(async () =>
+      assert.equal((await hive.state()).selectedFolder, other),
+    );
+    assert.equal(await field.getAttribute("aria-invalid"), "false");
+
+    // A tilde is the home folder.
+    await field.click();
+    await field.fill("~");
+    await field.press("Enter");
+    await eventually(async () =>
+      assert.equal((await hive.state()).selectedFolder, hive.fixture.home),
+    );
+    await row(page, "Fix login flow").waitFor();
   });
 
   test("puts the sessions of the last day in an open section and the older ones in a folded section", async () => {

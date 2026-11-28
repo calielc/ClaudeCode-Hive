@@ -25,6 +25,7 @@ const api: HiveApi = {
   hooksStatus: () => ipcRenderer.invoke("hooks:status"),
   installHooks: () => ipcRenderer.invoke("hooks:install"),
   pickFolder: () => ipcRenderer.invoke("dialog:pickFolder"),
+  resolveFolder: (path) => ipcRenderer.invoke("app:resolveFolder", path),
   setOpenTabs: (tabs: OpenTabRef[]) => ipcRenderer.send("tabs:setOpen", tabs),
   openExternal: (url) => ipcRenderer.send("app:openExternal", url),
   pty: {

@@ -262,12 +262,29 @@ export function setTag(ids: string[], tag: string | null): void {
   });
 }
 
-export async function pickFolder(): Promise<void> {
-  const folder = await hive().pickFolder();
-  if (folder && folder !== getState().selectedFolder) {
+function selectFolder(folder: string): void {
+  if (folder !== getState().selectedFolder) {
     setState({ selectedFolder: folder, isLoading: true, sessions: [] });
     void refresh();
   }
+}
+
+/** The folder button: the folder picker of the system. */
+export async function pickFolder(): Promise<void> {
+  const folder = await hive().pickFolder();
+  if (folder) {
+    selectFolder(folder);
+  }
+}
+
+/** A folder path typed into the folder field. Gives false when the path is not a folder, so the field can show it. */
+export async function openTypedFolder(path: string): Promise<boolean> {
+  const folder = await hive().resolveFolder(path);
+  if (!folder) {
+    return false;
+  }
+  selectFolder(folder);
+  return true;
 }
 
 export function setSplit(patch: { splitX?: number; splitY?: number }): void {

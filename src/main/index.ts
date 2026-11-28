@@ -18,6 +18,7 @@ import {
 import { listAgents, readAgentTranscript } from "./agents";
 import { listBackground, readBackgroundDetail } from "./background";
 import { isAppUrl, isOpenable } from "./external-url";
+import { resolveFolder } from "./folder-path";
 import { hooksStatus, installHooks } from "./hooks";
 import { PtyManager } from "./pty";
 import { searchSessions } from "./search";
@@ -351,6 +352,9 @@ function registerIpc(): void {
     event.returnValue = homedir();
   });
   ipcMain.handle("app:defaultFolder", () => homedir());
+  ipcMain.handle("app:resolveFolder", (_event, path: unknown) =>
+    resolveFolder(path, homedir()),
+  );
   ipcMain.handle("usage:read", () => readUsage());
   ipcMain.handle("update:get", () => updates?.available ?? null);
   ipcMain.handle("hooks:status", () => hooksStatus());

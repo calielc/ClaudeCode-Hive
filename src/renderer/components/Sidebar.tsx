@@ -10,6 +10,7 @@ import {
   activateTab,
   installHooks,
   openSession,
+  openTypedFolder,
   pickFolder,
   setQuery,
 } from "../actions";
@@ -69,17 +70,56 @@ function folderLabel(folder: string): string {
   return abbreviatePath(folder, home);
 }
 
+/**
+ * The folder field. You can type a path into it: Enter opens the folder, and Escape or a click elsewhere drops the
+ * text. Only the button opens the folder picker.
+ */
 function FolderRow() {
   const selected = useStore((state) => state.selectedFolder);
+  // The text that you type. Null while you do not type, and the field then shows the selected folder by name.
+  const [draft, setDraft] = useState<string | null>(null);
+  const [invalid, setInvalid] = useState(false);
+  const stop = (): void => {
+    setDraft(null);
+    setInvalid(false);
+  };
   return (
-    <label className="folder-row">
-      <span>Folder</span>
+    <div className="folder-row">
+      <label htmlFor="folder-field">Folder</label>
       <input
+        id="folder-field"
         type="text"
-        readOnly
-        value={folderLabel(selected)}
-        title={selected}
-        onClick={() => void pickFolder()}
+        spellCheck={false}
+        className={invalid ? "invalid" : ""}
+        aria-invalid={invalid}
+        value={draft ?? folderLabel(selected)}
+        title={invalid ? "This is not a folder" : selected}
+        onFocus={(event) => {
+          // While you type, the field shows the full path.
+          setDraft(selected);
+          const input = event.currentTarget;
+          setTimeout(() => input.select(), 0);
+        }}
+        onChange={(event) => {
+          setDraft(event.target.value);
+          setInvalid(false);
+        }}
+        onKeyDown={(event) => {
+          const input = event.currentTarget;
+          if (event.key === "Enter") {
+            event.preventDefault();
+            void openTypedFolder(input.value).then((opened) => {
+              if (opened) {
+                input.blur();
+              } else {
+                setInvalid(true);
+              }
+            });
+          } else if (event.key === "Escape") {
+            input.blur();
+          }
+        }}
+        onBlur={stop}
       />
       <button
         type="button"
@@ -92,7 +132,7 @@ function FolderRow() {
           <path d="M1.5 3.5h4l1 1.5h6v6.5h-11z" />
         </svg>
       </button>
-    </label>
+    </div>
   );
 }
 

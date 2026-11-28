@@ -88,7 +88,7 @@ button {
   padding: 10px 12px 0;
 }
 
-.folder-row span {
+.folder-row label {
   flex: none;
   color: var(--muted);
 }
@@ -96,7 +96,6 @@ button {
 .folder-row input {
   flex: 1;
   min-width: 0;
-  cursor: pointer;
   text-overflow: ellipsis;
   height: 30px;
   padding: 0 6px;
@@ -104,6 +103,21 @@ button {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 6px;
+}
+
+.folder-row input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.folder-row input.invalid {
+  border-color: var(--waiting);
+}
+
+/* The button has the height of the field, so both line up. */
+.folder-row .icon-button {
+  width: 30px;
+  height: 30px;
 }
 
 /* The plus and minus are drawn as lines, so they sit exactly in the middle of the button in every font. */

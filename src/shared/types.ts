@@ -136,6 +136,8 @@ export interface HiveApi {
   hooksStatus(): Promise<HooksStatus>;
   installHooks(): Promise<HooksStatus>;
   pickFolder(): Promise<string | null>;
+  /** The folder of a path that the user typed, or null when it is not a folder. `~` means the home folder. */
+  resolveFolder(path: string): Promise<string | null>;
   setOpenTabs(tabs: OpenTabRef[]): void;
   /** Opens a web link in the default browser of the system, where the user is already logged in. */
   openExternal(url: string): void;
